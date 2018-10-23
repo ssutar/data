@@ -4,6 +4,7 @@ import { setupTest } from 'ember-qunit';
 import Model from 'ember-data/model';
 import { attr } from '@ember-decorators/data';
 import { module, test } from 'qunit';
+import { settled } from '@ember/test-helpers';
 
 class Person extends Model {
   @attr
@@ -56,6 +57,8 @@ module('integration/peek-all - DS.Store#peekAll()', function(hooks) {
         },
       ],
     });
+
+    await settled();
 
     assert.equal(get(all, 'length'), 3);
   });
