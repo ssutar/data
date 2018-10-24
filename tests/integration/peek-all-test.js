@@ -1,5 +1,4 @@
 import { get } from '@ember/object';
-import { run } from '@ember/runloop';
 import { setupTest } from 'ember-qunit';
 import Model from 'ember-data/model';
 import { attr } from '@ember-decorators/data';

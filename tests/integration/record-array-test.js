@@ -8,7 +8,8 @@ import { module, test } from 'qunit';
 import Adapter from 'ember-data/adapter';
 
 class Person extends Model {
-  @attr name;
+  @attr
+  name;
   @belongsTo('tag', { async: false, inverse: 'people' })
   tag;
 }
@@ -84,7 +85,10 @@ module('unit/record-array - RecordArray', function(hooks) {
     };
 
     for (let i = 0, l = expectedResults.data.length; i < l; i++) {
-      let { id, attributes: { name } } = expectedResults.data[i];
+      let {
+        id,
+        attributes: { name },
+      } = expectedResults.data[i];
 
       assert.deepEqual(
         records[i].getProperties('id', 'name'),
@@ -279,7 +283,8 @@ module('unit/record-array - RecordArray', function(hooks) {
 
   test("a loaded record is not removed from a record array when it is deleted even if the belongsTo side isn't defined", async function(assert) {
     class Person extends Model {
-      @attr name;
+      @attr
+      name;
     }
 
     class Tag extends Model {
@@ -477,9 +482,21 @@ module('unit/record-array - RecordArray', function(hooks) {
 
     let recordArray = store.peekAll('person');
 
-    assert.equal(get(recordArray.objectAt(2), 'id'), '3', 'should retrieve correct record at index 2');
-    assert.equal(get(recordArray.objectAt(1), 'id'), '2', 'should retrieve correct record at index 1');
-    assert.equal(get(recordArray.objectAt(0), 'id'), '1', 'should retrieve correct record at index 0');
+    assert.equal(
+      get(recordArray.objectAt(2), 'id'),
+      '3',
+      'should retrieve correct record at index 2'
+    );
+    assert.equal(
+      get(recordArray.objectAt(1), 'id'),
+      '2',
+      'should retrieve correct record at index 1'
+    );
+    assert.equal(
+      get(recordArray.objectAt(0), 'id'),
+      '1',
+      'should retrieve correct record at index 0'
+    );
   });
 
   test("an AdapterPopulatedRecordArray knows if it's loaded or not", async function(assert) {
