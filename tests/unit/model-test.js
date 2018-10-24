@@ -370,6 +370,24 @@ module('unit/model - Model', function(hooks) {
       assert.equal(idChange, 1);
       assert.equal(person.get('id'), 'john', 'new id should be correctly set.');
     });
+
+    test('an ID of 0 is allowed', async function(assert) {
+      store.push({
+        data: {
+          type: 'person',
+          id: 0, // explicit number 0 to make this as risky as possible
+          attributes: {
+            name: 'Tom Dale',
+          },
+        },
+      });
+
+      // we peek it instead of getting the return of push to make sure
+      // we can locate it in the identity map
+      let record = store.peekRecord('person', 0);
+
+      assert.equal(record.get('name'), 'Tom Dale', 'found record with id 0');
+    });
   });
 
   module('@attr()', function() {
