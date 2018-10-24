@@ -15,6 +15,7 @@ import {
 
 import Ember from 'ember';
 import InternalModel from './internal-model';
+import RootState from './states';
 const { changeProperties } = Ember;
 
 /**
@@ -328,18 +329,26 @@ const Model = EmberObject.extend(Evented, {
     @private
     @type {Object}
   */
+  currentState: RootState.empty, // defined here to avoid triggering setUnknownProperty
 
   /**
    @property _internalModel
    @private
    @type {Object}
    */
+  _internalModel: null, // defined here to avoid triggering setUnknownProperty
 
   /**
    @property recordData
    @private
    @type undefined (reserved)
    */
+  // will be defined here to avoid triggering setUnknownProperty
+
+  /**
+   @property store
+   */
+  store: null, // defined here to avoid triggering setUnknownProperty
 
   /**
     When the record is in the `invalid` state this object will contain
@@ -1159,8 +1168,7 @@ const ID_DESCRIPTOR = {
 Object.defineProperty(Model.prototype, 'id', ID_DESCRIPTOR);
 
 if (DEBUG) {
-
-  function lookupDescriptor(obj, keyName) {
+  let lookupDescriptor = function lookupDescriptor(obj, keyName) {
     let current = obj;
     do {
       let descriptor = Object.getOwnPropertyDescriptor(current, keyName);
@@ -1170,16 +1178,21 @@ if (DEBUG) {
       current = Object.getPrototypeOf(current);
     } while (current !== null);
     return null;
-  }
-  function isBasicDesc(desc) {
-    return !desc || (
-      !desc.get && !desc.set && desc.enumerable === true && desc.writable === true && desc.configurable === true
+  };
+  let isBasicDesc = function isBasicDesc(desc) {
+    return (
+      !desc ||
+      (!desc.get &&
+        !desc.set &&
+        desc.enumerable === true &&
+        desc.writable === true &&
+        desc.configurable === true)
     );
-  }
-  function isDefaultEmptyDescriptor(obj, keyName) {
+  };
+  let isDefaultEmptyDescriptor = function isDefaultEmptyDescriptor(obj, keyName) {
     let instanceDesc = lookupDescriptor(obj, keyName);
     return isBasicDesc(instanceDesc) && lookupDescriptor(obj.constructor, keyName) === null;
-  }
+  };
 
   Model.reopen({
     init() {
@@ -1191,19 +1204,29 @@ if (DEBUG) {
         );
       }
 
-      if (!isDefaultEmptyDescriptor(this, '_internalModel') || !this._internalModel instanceof InternalModel) {
+      if (
+        !isDefaultEmptyDescriptor(this, '_internalModel') ||
+        !(this._internalModel instanceof InternalModel)
+      ) {
         throw new Error(
           `'_internalModel' is a reserved property name on instances of classes extending Model. Please choose a different property name for ${this.constructor.toString()}`
         );
       }
 
-      if (!isDefaultEmptyDescriptor(this, 'recordData') || this.recordData !== undefined || this.recordData !== this._internalModel.recordData) {
+      if (
+        !isDefaultEmptyDescriptor(this, 'recordData') ||
+        this.recordData !== undefined ||
+        this.recordData !== this._internalModel.recordData
+      ) {
         throw new Error(
           `'recordData' is a reserved property name on instances of classes extending Model. Please choose a different property name for ${this.constructor.toString()}`
         );
       }
 
-      if (!isDefaultEmptyDescriptor(this, 'currentState') || this.get('currentState') !== this._internalModel.currentState) {
+      if (
+        !isDefaultEmptyDescriptor(this, 'currentState') ||
+        this.get('currentState') !== this._internalModel.currentState
+      ) {
         throw new Error(
           `'currentState' is a reserved property name on instances of classes extending Model. Please choose a different property name for ${this.constructor.toString()}`
         );

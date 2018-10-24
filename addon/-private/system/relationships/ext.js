@@ -31,7 +31,7 @@ export const relatedTypesDescriptor = computed(function() {
   this.eachComputedProperty((name, meta) => {
     if (meta.isRelationship) {
       meta.key = name;
-     let modelName = typeForRelationshipMeta(meta);
+      let modelName = typeForRelationshipMeta(meta);
 
       assert(
         `You specified a hasMany (${meta.type}) on ${parentModelName} but ${
