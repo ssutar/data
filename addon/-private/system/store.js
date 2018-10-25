@@ -3161,7 +3161,10 @@ Store = Service.extend({
     // final fallback, no model specific serializer, no application serializer, no
     // `serializer` property on store: use json-api serializer
     serializer = _serializerCache['-default'] || owner.lookup('serializer:-default');
-    assert(`No serializer was found for '${modelName}' and no 'application', Adapter.defaultSerializer, or '-default' serializer were found as fallbacks.`, serializer !== undefined);
+    assert(
+      `No serializer was found for '${modelName}' and no 'application', Adapter.defaultSerializer, or '-default' serializer were found as fallbacks.`,
+      serializer !== undefined
+    );
     set(serializer, 'store', this);
     _serializerCache[normalizedModelName] = serializer;
     _serializerCache['-default'] = serializer;
