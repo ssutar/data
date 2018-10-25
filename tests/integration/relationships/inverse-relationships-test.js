@@ -1,37 +1,81 @@
+import { setupTest } from 'ember-qunit';
+import { module, test } from 'qunit';
+import { settled } from '@ember/test-helpers';
+import testInDebug from 'dummy/tests/helpers/test-in-debug';
+import { belongsTo, hasMany } from '@ember-decorators/data';
+
 import { run } from '@ember/runloop';
 import { createStore } from 'dummy/tests/helpers/store';
 import setupStore from 'dummy/tests/helpers/store';
-import testInDebug from 'dummy/tests/helpers/test-in-debug';
-import { module, test } from 'qunit';
+
 import Model from 'ember-data/model';
 
 import DS from 'ember-data';
 
 var Post, Comment, Message, User;
 
-module('integration/relationships/inverse_relationships - Inverse Relationships');
+module('integration/relationships/inverse-relationships - Inverse Relationships', function(hooks) {
+  setupTest(hooks);
+  let store;
 
-test('When a record is added to a has-many relationship, the inverse belongsTo is determined automatically', function(assert) {
-  Post = Model.extend({
-    comments: DS.hasMany('comment', { async: false }),
+  hooks.beforeEach(function() {
+    let { owner } = this;
+
+    store = owner.lookup('service:store');
   });
 
-  Comment = Model.extend({
-    post: DS.belongsTo('post', { async: false }),
-  });
+  test('When a record is added to a hasMany relationship with a belongsTo inverse, the inverse is populated', async function(assert) {
+    let { owner } = this;
+    class Post extends Model {
+      @hasMany('comment', { async: false })
+      comments;
+    }
+    class Comment extends Model {
+      @belongsTo('post', { async: false })
+      post;
+    }
 
-  var env = setupStore({ post: Post, comment: Comment });
-  var store = env.store;
+    owner.register('model:post', Post);
+    owner.register('model:comment', Comment);
 
-  let comment = store.createRecord('comment');
-  let post = store.createRecord('post');
+    let comment = store.createRecord('comment');
+    let post = store.createRecord('post');
 
-  assert.equal(comment.get('post'), null, 'no post has been set on the comment');
+    assert.strictEqual(comment.get('post'), null, 'no post has been set on the comment');
 
-  run(function() {
     post.get('comments').pushObject(comment);
+
+    await settled();
+
+    assert.strictEqual(comment.get('post'), post, 'post was set on the comment');
   });
-  assert.equal(comment.get('post'), post, 'post was set on the comment');
+
+  test('When a record is added to a hasMany relationship with a hasMany inverse, the inverse is populated', async function(assert) {
+    let { owner } = this;
+
+    class Post extends Model {
+      @hasMany('author', { async: false })
+      authors;
+    }
+    class Author extends Model {
+      @hasMany('post', { async: false })
+      posts;
+    }
+
+    owner.register('model:post', Post);
+    owner.register('model:author', Author);
+
+    let author = store.createRecord('author');
+    let post = store.createRecord('post');
+
+    assert.strictEqual(author.get('posts').objectAt(0), undefined, 'no post has been set on the author');
+
+    post.get('authors').pushObject(author);
+
+    await settled();
+
+    assert.strictEqual(author.get('posts').objectAt(0), post, 'post was set on the author');
+  });
 });
 
 test('When a record is added to a has-many relationship, the inverse belongsTo can be set explicitly', function(assert) {
