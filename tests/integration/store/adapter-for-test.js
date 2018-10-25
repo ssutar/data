@@ -41,6 +41,7 @@ module('integration/store - adapterFor', function(hooks) {
 
     assert.ok(adapter instanceof AppAdapter, 'We found the correct adapter');
     assert.ok(didInstantiate, 'We instantiated the adapter');
+    didInstantiate = false;
 
     let adapterAgain = store.adapterFor('application');
 
