@@ -8,7 +8,7 @@ import { resolve } from 'rsvp';
 import { attr, belongsTo, hasMany } from '@ember-decorators/data';
 import testInDebug from '../../helpers/test-in-debug';
 
-module('inverse relationship load test', function(hooks) {
+module('integration/relationships - loading inverse relationship payloads', function(hooks) {
   let store;
   setupTest(hooks);
 
