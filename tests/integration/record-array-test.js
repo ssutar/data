@@ -1,11 +1,12 @@
-import { get } from '@ember/object';
-import { resolve } from 'rsvp';
 import { setupTest } from 'ember-qunit';
+import { module, test } from 'qunit';
 import { settled } from '@ember/test-helpers';
+import { resolve } from 'rsvp';
+import Adapter from 'ember-data/adapter';
 import Model from 'ember-data/model';
 import { attr, belongsTo, hasMany } from '@ember-decorators/data';
-import { module, test } from 'qunit';
-import Adapter from 'ember-data/adapter';
+import { run } from '@ember/runloop';
+import { get } from '@ember/object';
 
 class Person extends Model {
   @attr
@@ -184,9 +185,8 @@ module('unit/record-array - RecordArray', function(hooks) {
 
     await settled();
 
-    recordArray.destroy();
-
-    await settled();
+    // Ember 2.18 will trigger the autorun assertion if we rely on `await settled()` here instead
+    run(() => recordArray.destroy());
 
     assert.equal(recordArray.get('length'), 0, 'Has no more records');
     store.push({

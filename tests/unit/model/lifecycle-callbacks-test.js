@@ -7,6 +7,7 @@ import Model from 'ember-data/model';
 import Adapter from 'ember-data/adapter';
 import JSONAPISerializer from 'ember-data/serializers/json-api';
 import { InvalidError } from 'ember-data/adapters/errors';
+import { run } from '@ember/runloop';
 
 module('unit/model - Model Lifecycle Callbacks', function(hooks) {
   setupTest(hooks);
@@ -1012,6 +1013,7 @@ module('unit/model - Model Lifecycle Callbacks', function(hooks) {
     // ------ Test Deletion of Record
 
     let record = store.createRecord('person', { name: 'Tomster' });
+
     record.deleteRecord();
     assert.strictEqual(
       lifecycleEventMethodCalls,
@@ -1020,19 +1022,29 @@ module('unit/model - Model Lifecycle Callbacks', function(hooks) {
     );
     lifecycleEventMethodCalls = 0;
 
-    await record.save();
+    await settled();
     assert.strictEqual(
       lifecycleEventMethodCalls,
       1,
-      'We trigger didDelete once we have saved the deletion'
+      'We do not trigger didDelete when we first call record.deleteRecord'
+    );
+    lifecycleEventMethodCalls = 0;
+
+    await record.save();
+    assert.strictEqual(
+      lifecycleEventMethodCalls,
+      0,
+      'We do not trigger didDelete once we have saved the deletion, as we secretly did previously'
     );
     lifecycleEventMethodCalls = 0;
 
     // ------ Test Unloading of Record
 
     record = store.createRecord('person', { name: 'Tomster' });
-    record.unloadRecord();
-    await settled();
+
+    // ideally we could `await settled()` but Ember 2.18 does not handle `destroy()` calls in this case.
+    run(() => record.unloadRecord());
+
     assert.strictEqual(
       lifecycleEventMethodCalls,
       0,
