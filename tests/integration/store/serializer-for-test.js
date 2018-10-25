@@ -60,7 +60,15 @@ module('integration/store - serializerFor', function(hooks) {
       This adapter specifies a defaultSerializer. We register our own to ensure
       that this does not occur.
      */
-    class AppAdapter extends TestAdapter {}
+    class AppAdapter extends TestAdapter {
+      constructor() {
+        super(...arguments);
+        // ensure our adapter instance does not specify a fallback
+        // we use an empty string as that would cause `owner.lookup` to blow up if not guarded properly
+        //  whereas `null` `undefined` `false` would not.
+        this.defaultSerializer = '';
+      }
+    }
     owner.register('adapter:application', AppAdapter);
 
     assert.expectAssertion(() => {
