@@ -41,6 +41,12 @@ module('integration/store - adapterFor', function(hooks) {
 
     assert.ok(adapter instanceof AppAdapter, 'We found the correct adapter');
     assert.ok(didInstantiate, 'We instantiated the adapter');
+
+    let adapterAgain = store.adapterFor('application');
+
+    assert.ok(adapterAgain instanceof AppAdapter, 'We found the correct adapter');
+    assert.ok(!didInstantiate, 'We did not instantiate the adapter again');
+    assert.ok(adapter === adapterAgain, 'Repeated calls to adapterFor return the same instance');
   });
 
   test('multiple stores do not share adapters', async function(assert) {
