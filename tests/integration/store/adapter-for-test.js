@@ -251,7 +251,7 @@ module('integration/store - adapterFor', function(hooks) {
     );
   });
 
-  test('When the application and specified fallback adapters do not exist, we fallback to the -json-api adapter', async function(assert) {
+  test('When the per-type, application and specified fallback adapters do not exist, we fallback to the -json-api adapter', async function(assert) {
     store.adapter = '-not-a-real-adapter';
     let { owner } = this;
 
