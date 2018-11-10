@@ -740,9 +740,9 @@ test('store._scheduleFetchMany should not resolve until all the records are reso
   store.createRecord('test');
 
   let internalModels = [
-    store._internalModelForId('test', 10),
-    store._internalModelForId('phone', 20),
-    store._internalModelForId('phone', 21),
+    store._internalModelForId('test', '10'),
+    store._internalModelForId('phone', '20'),
+    store._internalModelForId('phone', '21'),
   ];
 
   return run(() => {
@@ -784,9 +784,9 @@ test('the store calls adapter.findMany according to groupings returned by adapte
   });
 
   let internalModels = [
-    store._internalModelForId('test', 10),
-    store._internalModelForId('test', 20),
-    store._internalModelForId('test', 21),
+    store._internalModelForId('test', '10'),
+    store._internalModelForId('test', '20'),
+    store._internalModelForId('test', '21'),
   ];
 
   return run(() => {

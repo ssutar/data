@@ -82,7 +82,7 @@ const {
   _generateId,
   _internalModelForId,
   _load,
-  _pushInternalModel,
+  _pushResource,
   adapterFor,
   _buildInternalModel,
   _didUpdateAll,
@@ -96,7 +96,7 @@ const {
   '_generateId',
   '_internalModelForId',
   '_load',
-  '_pushInternalModel',
+  '_pushResource',
   'adapterFor',
   '_buildInternalModel',
   '_didUpdateAll',
@@ -755,11 +755,12 @@ const Store = Service.extend({
     );
 
     let normalizedModelName = normalizeModelName(modelName);
+    let normalizedId = coerceId(id);
 
-    let internalModel = this._internalModelForId(normalizedModelName, id);
+    let internalModel = this._internalModelForId(normalizedModelName, normalizedId);
     options = options || {};
 
-    if (!this.hasRecordForId(normalizedModelName, id)) {
+    if (!this.hasRecordForId(normalizedModelName, normalizedId)) {
       return this._findByInternalModel(internalModel, options);
     }
 
@@ -767,7 +768,7 @@ const Store = Service.extend({
 
     return promiseRecord(
       fetchedInternalModel,
-      `DS: Store#findRecord ${normalizedModelName} with id: ${id}`
+      `DS: Store#findRecord ${normalizedModelName} with id: ${normalizedId}`
     );
   },
 
@@ -1141,8 +1142,9 @@ const Store = Service.extend({
       assertDestroyingStore(this, 'getReference');
     }
     let normalizedModelName = normalizeModelName(modelName);
+    let normalizedId = coerceId(id);
 
-    return this._internalModelForId(normalizedModelName, id).recordReference;
+    return this._internalModelForId(normalizedModelName, normalizedId).recordReference;
   },
 
   /**
@@ -1183,9 +1185,10 @@ const Store = Service.extend({
       typeof modelName === 'string'
     );
     let normalizedModelName = normalizeModelName(modelName);
+    let normalizedId = coerceId(id);
 
-    if (this.hasRecordForId(normalizedModelName, id)) {
-      return this._internalModelForId(normalizedModelName, id).getRecord();
+    if (this.hasRecordForId(normalizedModelName, normalizedId)) {
+      return this._internalModelForId(normalizedModelName, normalizedId).getRecord();
     } else {
       return null;
     }
@@ -1258,29 +1261,6 @@ const Store = Service.extend({
     return !!internalModel && internalModel.isLoaded();
   },
 
-  /**
-    Returns id record for a given type and ID. If one isn't already loaded,
-    it builds a new record and leaves it in the `empty` state.
-
-    @method recordForId
-    @private
-    @param {String} modelName
-    @param {(String|Integer)} id
-    @return {DS.Model} record
-  */
-  recordForId(modelName, id) {
-    if (DEBUG) {
-      assertDestroyingStore(this, 'recordForId');
-    }
-    assert(`You need to pass a model name to the store's recordForId method`, isPresent(modelName));
-    assert(
-      `Passing classes to store methods has been removed. Please pass a dasherized string instead of ${modelName}`,
-      typeof modelName === 'string'
-    );
-
-    return this._internalModelForId(modelName, id).getRecord();
-  },
-
   // directly get an internal model from ID map if it is there, without doing any
   // processing
   _getInternalModelForId(modelName, id, clientId) {
@@ -1297,8 +1277,15 @@ const Store = Service.extend({
 
   _internalModelForId(modelName, id, clientId) {
     heimdall.increment(_internalModelForId);
-    let trueId = coerceId(id);
-    let internalModel = this._getInternalModelForId(modelName, trueId, clientId);
+
+    if (DEBUG) {
+      let trueId = coerceId(id);
+      if (trueId !== id) {
+        throw new Error('non-normalized id passed to _internalModelForId');
+      }
+    }
+
+    let internalModel = this._getInternalModelForId(modelName, id, clientId);
 
     if (internalModel) {
       // unloadRecord is async, if one attempts to unload + then sync push,
@@ -2651,7 +2638,7 @@ const Store = Service.extend({
 
       if (included) {
         for (i = 0, length = included.length; i < length; i++) {
-          this._pushInternalModel(included[i]);
+          this._pushResource(included[i]);
         }
       }
 
@@ -2660,7 +2647,7 @@ const Store = Service.extend({
         let internalModels = new Array(length);
 
         for (i = 0; i < length; i++) {
-          internalModels[i] = this._pushInternalModel(jsonApiDoc.data[i]);
+          internalModels[i] = this._pushResource(jsonApiDoc.data[i]);
         }
         return internalModels;
       }
@@ -2676,14 +2663,14 @@ const Store = Service.extend({
         typeOf(jsonApiDoc.data) === 'object'
       );
 
-      return this._pushInternalModel(jsonApiDoc.data);
+      return this._pushResource(jsonApiDoc.data);
     });
     heimdall.stop(token);
     return internalModelOrModels;
   },
 
-  _pushInternalModel(data) {
-    heimdall.increment(_pushInternalModel);
+  _pushResource(data) {
+    heimdall.increment(_pushResource);
     let modelName = data.type;
     assert(
       `You must include an 'id' for ${modelName} in an object passed to 'push'`,
@@ -2693,6 +2680,11 @@ const Store = Service.extend({
       `You tried to push data with a type '${modelName}' but no model could be found with that name.`,
       this._hasModelFor(modelName)
     );
+
+    // ensure that id is a string or null
+    data.id = coerceId(data.id);
+    // ensure that lid is a string or null
+    data.lid = coerceId(data.lid);
 
     if (DEBUG) {
       // If ENV.DS_WARN_ON_UNKNOWN_KEYS is set to true and the payload
