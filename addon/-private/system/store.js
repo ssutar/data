@@ -9,7 +9,7 @@ import { run as emberRunLoop } from '@ember/runloop';
 import { set, get, computed } from '@ember/object';
 import { getOwner } from '@ember/application';
 import { assign } from '@ember/polyfills';
-import { default as RSVP, Promise } from 'rsvp';
+import { all, defer, Promise, resolve } from 'rsvp';
 import Service from '@ember/service';
 import { typeOf, isPresent, isNone } from '@ember/utils';
 
@@ -804,25 +804,20 @@ const Store = Service.extend({
       internalModel.preloadData(options.preload);
     }
 
-    let fetchedInternalModel = this._findEmptyInternalModel(internalModel, options);
+    let promise;
+    if (internalModel.isEmpty()) {
+      promise = this._scheduleFetch(internalModel, options);
+    } else if (internalModel.isLoading()) {
+      //TODO double check about reloading
+      promise = internalModel._promiseProxy;
+    } else {
+      promise = resolve(internalModel);
+    }
 
     return promiseRecord(
-      fetchedInternalModel,
+      promise,
       `DS: Store#findRecord ${internalModel.modelName} with id: ${internalModel.id}`
     );
-  },
-
-  _findEmptyInternalModel(internalModel, options) {
-    if (internalModel.isEmpty()) {
-      return this._scheduleFetch(internalModel, options);
-    }
-
-    //TODO double check about reloading
-    if (internalModel.isLoading()) {
-      return internalModel._promiseProxy;
-    }
-
-    return Promise.resolve(internalModel);
   },
 
   /**
@@ -854,7 +849,7 @@ const Store = Service.extend({
     }
 
     return promiseArray(
-      RSVP.all(promises).then(A, null, `DS: Store#findByIds of ${normalizedModelName} complete`)
+      all(promises).then(A, null, `DS: Store#findByIds of ${normalizedModelName} complete`)
     );
   },
 
@@ -897,7 +892,7 @@ const Store = Service.extend({
     }
 
     let { id, modelName } = internalModel;
-    let resolver = RSVP.defer(`Fetching ${modelName}' with id: ${id}`);
+    let resolver = defer(`Fetching ${modelName}' with id: ${id}`);
     let pendingFetchItem = {
       internalModel,
       resolver,
@@ -1301,7 +1296,7 @@ const Store = Service.extend({
       return internalModel;
     }
 
-    return this._buildInternalModel(modelName, trueId, null, clientId);
+    return this._buildInternalModel(modelName, id, null, clientId);
   },
 
   /**
@@ -1317,7 +1312,7 @@ const Store = Service.extend({
     let finds = new Array(internalModels.length);
 
     for (let i = 0; i < internalModels.length; i++) {
-      finds[i] = this._findEmptyInternalModel(internalModels[i], options);
+      finds[i] = this._findByInternalModel(internalModels[i], options);
     }
 
     return Promise.all(finds);
@@ -1363,7 +1358,7 @@ const Store = Service.extend({
 
   _findHasManyByJsonApiResource(resource, parentInternalModel, relationshipMeta, options) {
     if (!resource) {
-      return RSVP.resolve([]);
+      return resolve([]);
     }
 
     let {
@@ -1422,7 +1417,7 @@ const Store = Service.extend({
 
     // we were explicitly told we have no data and no links.
     //   TODO if the relationshipIsStale, should we hit the adapter anyway?
-    return RSVP.resolve([]);
+    return resolve([]);
   },
 
   _getHasManyByJsonApiResource(resource) {
@@ -1464,7 +1459,7 @@ const Store = Service.extend({
   _fetchBelongsToLinkFromResource(resource, parentInternalModel, relationshipMeta, options) {
     if (!resource || !resource.links || !resource.links.related) {
       // should we warn here, not sure cause its an internal method
-      return RSVP.resolve(null);
+      return resolve(null);
     }
     return this.findBelongsTo(
       parentInternalModel,
@@ -1484,7 +1479,7 @@ const Store = Service.extend({
 
   _findBelongsToByJsonApiResource(resource, parentInternalModel, relationshipMeta, options) {
     if (!resource) {
-      return RSVP.resolve(null);
+      return resolve(null);
     }
 
     let internalModel = resource.data ? this._internalModelForResource(resource.data) : null;
@@ -1532,7 +1527,7 @@ const Store = Service.extend({
         We have canonical data, but our local state is empty
        */
       if (localDataIsEmpty) {
-        return RSVP.resolve(null);
+        return resolve(null);
       }
 
       return this._findByInternalModel(internalModel, options);
@@ -1541,7 +1536,7 @@ const Store = Service.extend({
     let resourceIsLocal = !localDataIsEmpty && resource.data.id === null;
 
     if (resourceIsLocal) {
-      return RSVP.resolve(internalModel.getRecord());
+      return resolve(internalModel.getRecord());
     }
 
     // fetch by data
@@ -1553,7 +1548,7 @@ const Store = Service.extend({
 
     // we were explicitly told we have no data and no links.
     //   TODO if the relationshipIsStale, should we hit the adapter anyway?
-    return RSVP.resolve(null);
+    return resolve(null);
   },
 
   /**
