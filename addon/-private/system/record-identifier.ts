@@ -61,6 +61,10 @@ function makeRecordIdentifier(resourceIdentifier: IResourceIdentifier): IRecordI
       get meta() {
         return recordIdentifier.meta;
       },
+      toString() {
+        let { type, id, lid } = recordIdentifier;
+        return `${type}:${id} (${lid})`;
+      },
     };
     Object.freeze(wrapper);
     DEBUG_MAP.set(wrapper, recordIdentifier);
@@ -81,9 +85,7 @@ function performRecordIdentifierUpdate(
       let newLid = coerceId(lid);
       if (newLid !== identifier.lid) {
         throw new Error(
-          `The 'lid' for a RecordIdentifier cannot be updated once it has been created. Attempted to set lid for '${
-            identifier.type
-          }:${identifier.id} (${identifier.lid})' to '${lid}'.`
+          `The 'lid' for a RecordIdentifier cannot be updated once it has been created. Attempted to set lid for '${identifier}' to '${lid}'.`
         );
       }
     }
@@ -93,9 +95,7 @@ function performRecordIdentifierUpdate(
 
       if (identifier.id !== null && identifier.id !== newId) {
         throw new Error(
-          `The 'id' for a RecordIdentifier cannot be updated once it has been set. Attempted to set id for '${
-            identifier.type
-          }:${identifier.id} (${identifier.lid})' to '${newId}'.`
+          `The 'id' for a RecordIdentifier cannot be updated once it has been set. Attempted to set id for '${identifier}' to '${newId}'.`
         );
       }
     }
@@ -103,9 +103,7 @@ function performRecordIdentifierUpdate(
     // TODO consider how to support both single and multi table polymorphism
     if (type !== identifier.type) {
       throw new Error(
-        `The 'type' for a RecordIdentifier cannot be updated once it has been set. Attempted to set type for '${
-          identifier.type
-        }:${identifier.id} (${identifier.lid})' to '${type}'.`
+        `The 'type' for a RecordIdentifier cannot be updated once it has been set. Attempted to set type for '${identifier}' to '${type}'.`
       );
     }
   }
@@ -144,9 +142,7 @@ export function updateRecordIdentifier(
 ): void {
   if (DEBUG) {
     assert(
-      `The passed identifier for ${identifier.type}:${identifier.id} (${
-        identifier.lid
-      }) does not belong to the given store instance.`,
+      `The passed identifier for '${identifier}' does not belong to the given store instance.`,
       identifier === recordIdentifierFor(store, identifier)
     );
 
@@ -158,9 +154,7 @@ export function updateRecordIdentifier(
       let eid = keyOptions.id[newId];
       if (eid !== undefined) {
         throw new Error(
-          `Attempted to update the 'id' for the RecordIdentifier '${identifier.type}:${id} (${
-            identifier.lid
-          })' to '${newId}', but that id is already in use by '${eid.type}:${eid.id} (${eid.lid})'`
+          `Attempted to update the 'id' for the RecordIdentifier '${identifier}' to '${newId}', but that id is already in use by '${eid}'`
         );
       }
     }
@@ -198,6 +192,31 @@ function getLookupBucket(store: TStore, type) {
 
 function isNonEmptyString(str?: string | null): str is string {
   return typeof str === 'string' && str.length > 0;
+}
+
+export function createRecordIdentifier(
+  store: TStore,
+  resourceIdentifier: IResourceIdentifier
+): IRecordIdentifier {
+  let keyOptions = getLookupBucket(store, resourceIdentifier.type);
+  let identifier = makeRecordIdentifier(resourceIdentifier);
+
+  if (identifier.id !== null) {
+    if (DEBUG) {
+      let eid = keyOptions.id[identifier.id];
+      if (eid !== undefined) {
+        throw new Error(
+          `Attempted to create a new RecordIdentifier '${identifier}' but that id is already in use by '${eid}'`
+        );
+      }
+    }
+
+    keyOptions.id[identifier.id] = identifier;
+  }
+
+  keyOptions.lid[identifier.lid] = identifier;
+
+  return identifier;
 }
 
 export function recordIdentifierFor(
