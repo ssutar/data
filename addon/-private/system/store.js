@@ -85,7 +85,6 @@ function promiseRecord(internalModelPromise, label) {
 
 const {
   _generateId,
-  _internalModelForId,
   _load,
   _pushResource,
   adapterFor,
@@ -99,7 +98,6 @@ const {
 } = heimdall.registerMonitor(
   'store',
   '_generateId',
-  '_internalModelForId',
   '_load',
   '_pushResource',
   'adapterFor',
@@ -771,13 +769,14 @@ const Store = Service.extend({
       (typeof id === 'string' && id.length > 0) || (typeof id === 'number' && !isNaN(id))
     );
 
-    let normalizedModelName = normalizeModelName(modelName);
+    let type = normalizeModelName(modelName);
     let normalizedId = coerceId(id);
+    let identifier = recordIdentifierFor(this, { type, id: normalizedId });
 
-    let internalModel = this._internalModelForId(normalizedModelName, normalizedId);
+    let internalModel = this._internalModelForIdentifier(identifier);
     options = options || {};
 
-    if (!this.hasRecordForId(normalizedModelName, normalizedId)) {
+    if (!this.hasRecordForId(type, normalizedId)) {
       return this._findByInternalModel(internalModel, options);
     }
 
@@ -785,7 +784,7 @@ const Store = Service.extend({
 
     return promiseRecord(
       fetchedInternalModel,
-      `DS: Store#findRecord ${normalizedModelName} with id: ${normalizedId}`
+      `DS: Store#findRecord ${type} with id: ${normalizedId}`
     );
   },
 
@@ -1149,14 +1148,16 @@ const Store = Service.extend({
     @since 2.5.0
     @return {RecordReference}
   */
+  // TODO IDENTIFIER RFC - arg should be resourceIdentifier
   getReference(modelName, id) {
     if (DEBUG) {
       assertDestroyingStore(this, 'getReference');
     }
-    let normalizedModelName = normalizeModelName(modelName);
+    let type = normalizeModelName(modelName);
     let normalizedId = coerceId(id);
+    let identifier = recordIdentifierFor(this, { type, id: normalizedId });
 
-    return this._internalModelForId(normalizedModelName, normalizedId).recordReference;
+    return this._internalModelForIdentifier(identifier).recordReference;
   },
 
   /**
@@ -1196,11 +1197,12 @@ const Store = Service.extend({
       `Passing classes to store methods has been removed. Please pass a dasherized string instead of ${modelName}`,
       typeof modelName === 'string'
     );
-    let normalizedModelName = normalizeModelName(modelName);
+    let type = normalizeModelName(modelName);
     let normalizedId = coerceId(id);
+    let identifier = recordIdentifierFor(this, { type, id: normalizedId });
 
-    if (this.hasRecordForId(normalizedModelName, normalizedId)) {
-      return this._internalModelForId(normalizedModelName, normalizedId).getRecord();
+    if (this.hasRecordForId(type, normalizedId)) {
+      return this._internalModelForIdentifier(identifier).getRecord();
     } else {
       return null;
     }
@@ -1279,17 +1281,7 @@ const Store = Service.extend({
     return this._internalModelsFor(identifier.type).get(identifier.lid);
   },
 
-  _internalModelForId(type, id, lid) {
-    heimdall.increment(_internalModelForId);
-
-    if (DEBUG) {
-      let trueId = coerceId(id);
-      if (trueId !== id) {
-        throw new Error('non-normalized id passed to _internalModelForId');
-      }
-    }
-
-    let identifier = recordIdentifierFor(this, { type, id, lid });
+  _internalModelForIdentifier(identifier) {
     let internalModel = this._getInternalModelForIdentifier(identifier);
 
     if (internalModel) {
@@ -2359,8 +2351,10 @@ const Store = Service.extend({
   */
   _load(data) {
     heimdall.increment(_load);
-    let modelName = normalizeModelName(data.type);
-    let internalModel = this._internalModelForId(modelName, data.id);
+    let type = normalizeModelName(data.type);
+    let id = coerceId(data.id);
+    let identifier = recordIdentifierFor(this, { type, id });
+    let internalModel = this._internalModelForIdentifier(identifier);
 
     let isUpdate = internalModel.currentState.isEmpty === false;
 
@@ -2849,8 +2843,10 @@ const Store = Service.extend({
     return relationships;
   },
 
+  // TODO IDENTIFIER RFC - arg should be identifier
   _internalModelForResource(resource) {
-    return this._internalModelForId(resource.type, resource.id, resource.lid);
+    let identifier = recordIdentifierFor(this, resource);
+    return this._internalModelForIdentifier(identifier);
   },
 
   _createRecordData(modelName, id, clientId, internalModel) {
@@ -2861,15 +2857,22 @@ const Store = Service.extend({
     return new RecordData(modelName, id, clientId, storeWrapper, this);
   },
 
-  recordDataFor(modelName, id, clientId) {
-    let internalModel = this._internalModelForId(modelName, id, clientId);
+  // TODO IDENTIFIER RFC - arg should be resource-identifier
+  recordDataFor(type, id, lid) {
+    let identifier = recordIdentifierFor(this, { type, id, lid });
+    let internalModel = this._internalModelForIdentifier(identifier);
+
     return recordDataFor(internalModel);
   },
 
   _internalModelForRecordData(recordData) {
+    // TODO IDENTIFIER RFC - get recordIdentifier directly from recordData via WeakMap
     let resource = recordData.getResourceIdentifier();
-    return this._internalModelForId(resource.type, resource.id, resource.clientId);
+    let identifier = recordIdentifierFor(this, resource);
+
+    return this._internalModelForIdentifier(identifier);
   },
+
   /**
     `normalize` converts a json payload into the normalized form that
     [push](#method_push) expects.
@@ -2942,7 +2945,7 @@ const Store = Service.extend({
     if (internalModel && internalModel.hasScheduledDestroy()) {
       // unloadRecord is async, if one attempts to unload + then sync create,
       //   we must ensure the unload is complete before starting the create
-      //   The push path will take _internalModelForId()
+      //   The push path will take _internalModelForIdentifier()
       //   which will call `cancelDestroy` instead for this unload + then
       //   sync push scenario. Once we have true client-side
       //   delete signaling, we should never call destroySync
@@ -3249,8 +3252,8 @@ const Store = Service.extend({
       !Array.isArray(resourceIdentifier)
     );
 
-    //TODO:Better asserts
-    return this._internalModelForId(resourceIdentifier.type, resourceIdentifier.id);
+    let identifier = recordIdentifierFor(this, resourceIdentifier);
+    return this._internalModelForIdentifier(identifier);
   },
 
   _pushResourceIdentifiers(relationship, resourceIdentifiers) {

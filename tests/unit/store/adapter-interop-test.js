@@ -9,6 +9,7 @@ import testInDebug from 'dummy/tests/helpers/test-in-debug';
 import { module, test } from 'qunit';
 
 import DS from 'ember-data';
+import internalModelFor from 'dummy/tests/helpers/internal-model-for';
 
 let TestAdapter, store;
 
@@ -740,9 +741,9 @@ test('store._scheduleFetchMany should not resolve until all the records are reso
   store.createRecord('test');
 
   let internalModels = [
-    store._internalModelForId('test', '10'),
-    store._internalModelForId('phone', '20'),
-    store._internalModelForId('phone', '21'),
+    internalModelFor(store, 'test', '10'),
+    internalModelFor(store, 'phone', '20'),
+    internalModelFor(store, 'phone', '21'),
   ];
 
   return run(() => {
@@ -784,9 +785,9 @@ test('the store calls adapter.findMany according to groupings returned by adapte
   });
 
   let internalModels = [
-    store._internalModelForId('test', '10'),
-    store._internalModelForId('test', '20'),
-    store._internalModelForId('test', '21'),
+    internalModelFor(store, 'test', '10'),
+    internalModelFor(store, 'test', '20'),
+    internalModelFor(store, 'test', '21'),
   ];
 
   return run(() => {

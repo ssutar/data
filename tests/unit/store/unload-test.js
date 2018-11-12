@@ -7,6 +7,7 @@ import testInDebug from 'dummy/tests/helpers/test-in-debug';
 import { module, test } from 'qunit';
 
 import DS from 'ember-data';
+import internalModelFor from 'dummy/tests/helpers/internal-model-for';
 
 let store, tryToFind, Record;
 
@@ -112,7 +113,7 @@ test('unload followed by create of the same type + id', function(assert) {
   let record = store.createRecord('record', { id: 1 });
 
   assert.ok(
-    store._internalModelForId('record', '1').getRecord() === record,
+    internalModelFor(store, 'record', '1').getRecord() === record,
     'record should exactly equal'
   );
 
