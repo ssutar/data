@@ -3,7 +3,7 @@ import { assertPolymorphicType } from 'ember-data/-debug';
 import Model from '../model/model';
 import Reference from './reference';
 import recordDataFor from '../record-data-for';
-import recordIdentifierFor from '../cache/record-identifier';
+import { recordIdentifierFor } from '../cache/record-identifier';
 
 /**
  A BelongsToReference is a low-level API that allows users and

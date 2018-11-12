@@ -20,7 +20,6 @@ import { assert, deprecate, warn, inspect } from '@ember/debug';
 import { DEBUG } from '@glimmer/env';
 import Model from './model/model';
 import normalizeModelName from './normalize-model-name';
-import IdentityMap from './identity-map';
 import RecordDataWrapper from './store/record-data-wrapper';
 import { promiseArray, promiseObject } from './promise-proxies';
 
@@ -51,6 +50,11 @@ import RecordArrayManager from './record-array-manager';
 import InternalModel from './model/internal-model';
 import RecordData from './model/record-data';
 import edBackburner from './backburner';
+import {
+  internalModelFor,
+  clearInternalModels,
+  setInternalModelFor,
+} from './cache/internal-model-for';
 
 const badIdFormatAssertion = '`id` passed to `findRecord()` has to be non-empty string or number';
 const emberRun = emberRunLoop.backburner;
@@ -91,7 +95,6 @@ const {
   peekAll,
   peekRecord,
   serializerFor,
-  _internalModelsFor,
 } = heimdall.registerMonitor(
   'store',
   '_generateId',
@@ -103,8 +106,7 @@ const {
   'normalize',
   'peekAll',
   'peekRecord',
-  'serializerFor',
-  '_internalModelsFor'
+  'serializerFor'
 );
 
 /**
@@ -190,7 +192,6 @@ const Store = Service.extend({
     this._backburner = edBackburner;
     // internal bookkeeping; not observable
     this.recordArrayManager = new RecordArrayManager({ store: this });
-    this._identityMap = new IdentityMap();
     this._pendingSave = [];
     this._modelFactoryCache = Object.create(null);
     this._relationshipsDefCache = Object.create(null);
@@ -1270,15 +1271,15 @@ const Store = Service.extend({
     let normalizedModelName = normalizeModelName(modelName);
     let trueId = coerceId(id);
     let identifier = recordIdentifierFor(this, { type: normalizedModelName, id: trueId });
-    let internalModel = this._internalModelsFor(normalizedModelName).get(identifier.lid);
+    let internalModel = internalModelFor(identifier);
 
-    return !!internalModel && internalModel.isLoaded();
+    return internalModel !== null && internalModel.isLoaded();
   },
 
   // directly get an internal model from ID map if it is there, without doing any
   // processing
   _getInternalModelForIdentifier(identifier) {
-    return this._internalModelsFor(identifier.type).get(identifier.lid);
+    return internalModelFor(identifier);
   },
 
   _internalModelForIdentifier(identifier) {
@@ -2029,7 +2030,6 @@ const Store = Service.extend({
   */
   _fetchAll(modelName, array, options = {}) {
     let adapter = this.adapterFor(modelName);
-    let sinceToken = this._internalModelsFor(modelName).metadata.since;
 
     assert(`You tried to load all records but you have no adapter (for ${modelName})`, adapter);
     assert(
@@ -2039,14 +2039,14 @@ const Store = Service.extend({
 
     if (options.reload) {
       set(array, 'isUpdating', true);
-      return promiseArray(_findAll(adapter, this, modelName, sinceToken, options));
+      return promiseArray(_findAll(adapter, this, modelName, options));
     }
 
     let snapshotArray = array._createSnapshot(options);
 
     if (adapter.shouldReloadAll(this, snapshotArray)) {
       set(array, 'isUpdating', true);
-      return promiseArray(_findAll(adapter, this, modelName, sinceToken, options));
+      return promiseArray(_findAll(adapter, this, modelName, options));
     }
 
     if (options.backgroundReload === false) {
@@ -2055,7 +2055,7 @@ const Store = Service.extend({
 
     if (options.backgroundReload || adapter.shouldBackgroundReloadAll(this, snapshotArray)) {
       set(array, 'isUpdating', true);
-      _findAll(adapter, this, modelName, sinceToken, options);
+      _findAll(adapter, this, modelName, options);
     }
 
     return promiseArray(Promise.resolve(array));
@@ -2133,10 +2133,10 @@ const Store = Service.extend({
     );
 
     if (arguments.length === 0) {
-      this._identityMap.clear();
+      clearInternalModels(this);
     } else {
       let normalizedModelName = normalizeModelName(modelName);
-      this._internalModelsFor(normalizedModelName).clear();
+      clearInternalModels(this, normalizedModelName);
     }
   },
 
@@ -2331,19 +2331,6 @@ const Store = Service.extend({
     updateRecordIdentifier(this, identifier, { type: modelName, id });
 
     internalModel.setId(id);
-  },
-
-  /**
-    Returns a map of IDs to client IDs for a given modelName.
-
-    @method _internalModelsFor
-    @private
-    @param {String} modelName
-    @return {Object} recordMap
-  */
-  _internalModelsFor(modelName) {
-    heimdall.increment(_internalModelsFor);
-    return this._identityMap.retrieve(modelName);
   },
 
   // ................
@@ -2939,13 +2926,13 @@ const Store = Service.extend({
     );
 
     let internalModel = new InternalModel(this, identifier);
-    this._internalModelsFor(identifier.type).add(internalModel, identifier.lid);
+    setInternalModelFor(identifier, internalModel);
 
     return internalModel;
   },
 
   _existingInternalModelFor(identifier) {
-    let internalModel = this._internalModelsFor(identifier.type).get(identifier.lid);
+    let internalModel = internalModelFor(identifier);
 
     if (internalModel && internalModel.hasScheduledDestroy()) {
       // unloadRecord is async, if one attempts to unload + then sync create,
@@ -2984,9 +2971,8 @@ const Store = Service.extend({
   _removeFromIdMap(internalModel) {
     let { modelName, id, clientId } = internalModel;
     let identifier = recordIdentifierFor(this, { type: modelName, id, lid: clientId });
-    let recordMap = this._internalModelsFor(modelName);
 
-    recordMap.remove(internalModel, clientId);
+    setInternalModelFor(identifier, null);
 
     // allow this identifier to be reused by a different record
     forgetRecordIdentifier(this, identifier);

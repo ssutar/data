@@ -427,7 +427,7 @@ module('integration/unload - Unloading Records', function(hooks) {
   }
 
   test('unloadAll(type) does not leave stranded internalModels in relationships (rediscover via store.push)', function(assert) {
-    assert.expect(15);
+    assert.expect(16);
 
     let person = run(() =>
       store.push({
@@ -475,7 +475,8 @@ module('integration/unload - Unloading Records', function(hooks) {
 
     // ensure that our new state is correct
     assert.equal(knownPeople.length, 1, 'one person record is loaded');
-    assert.equal(knownBoats.length, 0, 'no boat records are loaded');
+    assert.equal(knownBoats.length, 1, 'we still have a boat');
+    assert.equal(knownBoats[0].isHiddenFromRecordArrays(), true, 'our boat is hidden');
     assert.equal(
       relationshipState.canonicalMembers.size,
       1,
@@ -500,7 +501,7 @@ module('integration/unload - Unloading Records', function(hooks) {
   });
 
   test('unloadAll(type) does not leave stranded internalModels in relationships (rediscover via relationship reload)', function(assert) {
-    assert.expect(17);
+    assert.expect(18);
 
     adapter.findRecord = (store, type, id) => {
       assert.ok(type.modelName === 'boat', 'We refetch the boat');
@@ -556,7 +557,8 @@ module('integration/unload - Unloading Records', function(hooks) {
 
     // ensure that our new state is correct
     assert.equal(knownPeople.length, 1, 'one person record is loaded');
-    assert.equal(knownBoats.length, 0, 'no boat records are loaded');
+    assert.equal(knownBoats.length, 1, 'we still have a boat');
+    assert.equal(knownBoats[0].isHiddenFromRecordArrays(), true, 'our boat is hidden');
     assert.equal(
       relationshipState.canonicalMembers.size,
       1,

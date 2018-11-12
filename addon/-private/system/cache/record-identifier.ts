@@ -20,6 +20,7 @@ type TResource = IDeprecatedResourceIdentifier;
 interface IKeyOptions {
   lid: TDict<TclientId, TIdentifier>;
   id: TDict<Tid, TIdentifier>;
+  _allIdentifiers: TIdentifier[];
 }
 
 type TTypeMap = TDict<TmodelName, IKeyOptions>;
@@ -197,11 +198,16 @@ function getLookupBucket(store: TStore, type) {
     keyOptions = {
       lid: Object.create(null),
       id: Object.create(null),
+      _allIdentifiers: [],
     } as IKeyOptions;
     typeMap[type] = keyOptions;
   }
 
   return keyOptions;
+}
+
+export function recordIdentifiersFor(store: TStore, type) {
+  return getLookupBucket(store, type)._allIdentifiers;
 }
 
 function isNonEmptyString(str?: string | null): str is string {
@@ -226,6 +232,7 @@ export function createRecordIdentifier(store: TStore, resourceIdentifier: TResou
   }
 
   keyOptions.lid[identifier.lid] = identifier;
+  keyOptions._allIdentifiers.push(identifier);
 
   return identifier;
 }
@@ -236,6 +243,9 @@ export function forgetRecordIdentifier(store: TStore, identifier: TIdentifier) {
     delete keyOptions.id[identifier.id];
   }
   delete keyOptions.lid[identifier.lid];
+
+  let index = keyOptions._allIdentifiers.indexOf(identifier);
+  keyOptions._allIdentifiers.splice(index, 1);
 }
 
 export function recordIdentifierFor(
@@ -274,6 +284,7 @@ export function recordIdentifierFor(
   if (identifier === null && (hasId || hasLid)) {
     identifier = makeRecordIdentifier(resourceIdentifier);
     keyOptions.lid[identifier.lid] = identifier;
+    keyOptions._allIdentifiers.push(identifier);
 
     if (hasId) {
       keyOptions.id[id as string] = identifier;
