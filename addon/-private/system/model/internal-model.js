@@ -16,6 +16,7 @@ import { PromiseBelongsTo, PromiseManyArray } from '../promise-proxies';
 
 import { RecordReference, BelongsToReference, HasManyReference } from '../references';
 import { default as recordDataFor, relationshipStateFor } from '../record-data-for';
+import { recordIdentifierFor } from '../record-identifier';
 
 /*
   The TransitionChainMap caches the `state.enters`, `state.setups`, and final state reached
@@ -477,16 +478,19 @@ export default class InternalModel {
   }
 
   getBelongsTo(key, options) {
+    // TODO IDENTIFIER RFC - resource.data here should be already be record-identifier
     let resource = this._recordData.getBelongsTo(key);
-    let relationshipMeta = this.store._relationshipMetaFor(this.modelName, null, key);
     let store = this.store;
+    let identifier =
+      resource && resource.data ? recordIdentifierFor(this.store, resource.data) : null;
+    let relationshipMeta = store._relationshipMetaFor(this.modelName, null, key);
     let parentInternalModel = this;
     let async = relationshipMeta.options.async;
     let isAsync = typeof async === 'undefined' ? true : async;
 
     if (isAsync) {
       let internalModel =
-        resource && resource.data ? store._internalModelForResource(resource.data) : null;
+        identifier !== null ? store._internalModelForIdentifier(identifier) : null;
       return PromiseBelongsTo.create({
         _belongsToState: resource._relationship,
         promise: store._findBelongsToByJsonApiResource(
@@ -498,10 +502,10 @@ export default class InternalModel {
         content: internalModel ? internalModel.getRecord() : null,
       });
     } else {
-      if (!resource || !resource.data) {
+      if (identifier === null) {
         return null;
       } else {
-        let internalModel = store._internalModelForResource(resource.data);
+        let internalModel = store._internalModelForIdentifier(identifier);
         let toReturn = internalModel.getRecord();
         assert(
           "You looked up the '" +

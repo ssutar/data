@@ -1403,7 +1403,11 @@ const Store = Service.extend({
 
     // fetch using data, pulling from local cache if possible
     if (!relationshipIsStale && (preferLocalCache || hasLocalPartialData)) {
-      let internalModels = resource.data.map(json => this._internalModelForResource(json));
+      // TODO IDENTIFIER RFC - resource.data should be record-identifier already
+      let internalModels = resource.data.map(json => {
+        let identifier = recordIdentifierFor(this, json);
+        return this._internalModelForIdentifier(identifier);
+      });
 
       return this.findMany(internalModels, options);
     }
@@ -1412,7 +1416,11 @@ const Store = Service.extend({
 
     // fetch by data
     if (hasData || hasLocalPartialData) {
-      let internalModels = resource.data.map(json => this._internalModelForResource(json));
+      // TODO IDENTIFIER RFC - resource.data should be record-identifier already
+      let internalModels = resource.data.map(json => {
+        let identifier = recordIdentifierFor(this, json);
+        return this._internalModelForIdentifier(identifier);
+      });
 
       return this._scheduleFetchMany(internalModels, options);
     }
@@ -1425,7 +1433,11 @@ const Store = Service.extend({
   _getHasManyByJsonApiResource(resource) {
     let internalModels = [];
     if (resource && resource.data) {
-      internalModels = resource.data.map(reference => this._internalModelForResource(reference));
+      // TODO IDENTIFIER RFC - resource.data should be record-identifiers already
+      internalModels = resource.data.map(reference => {
+        let identifier = recordIdentifierFor(this, reference);
+        return this._internalModelForIdentifier(identifier);
+      });
     }
     return internalModels;
   },
@@ -1484,7 +1496,9 @@ const Store = Service.extend({
       return resolve(null);
     }
 
-    let internalModel = resource.data ? this._internalModelForResource(resource.data) : null;
+    // TODO IDENTIFIER RFC - resource.data should be record-identifier already
+    let identifier = resource.data ? recordIdentifierFor(this, resource.data) : null;
+    let internalModel = identifier ? this._internalModelForIdentifier(identifier) : null;
     let {
       relationshipIsStale,
       allInverseRecordsAreLoaded,
@@ -2835,12 +2849,6 @@ const Store = Service.extend({
     }
 
     return relationships;
-  },
-
-  // TODO IDENTIFIER RFC - arg should be identifier
-  _internalModelForResource(resource) {
-    let identifier = recordIdentifierFor(this, resource);
-    return this._internalModelForIdentifier(identifier);
   },
 
   _createRecordData(identifier) {
