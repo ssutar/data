@@ -54,10 +54,7 @@ import edBackburner from './backburner';
 
 const badIdFormatAssertion = '`id` passed to `findRecord()` has to be non-empty string or number';
 const emberRun = emberRunLoop.backburner;
-
 const { ENV } = Ember;
-
-let globalClientIdCounter = 1;
 
 //Get the materialized model from the internalModel/promise that returns
 //an internal model and return it in a promiseObject. Useful for returning
@@ -755,6 +752,7 @@ const Store = Service.extend({
     @param {Object} preload - optional set of attributes and relationships passed in either as IDs or as actual models
     @return {Promise} promise
   */
+  // TODO IDENTIFIER RFC - arg should be resource-identifier
   findRecord(modelName, id, options) {
     if (DEBUG) {
       assertDestroyingStore(this, 'findRecord');
@@ -1183,6 +1181,7 @@ const Store = Service.extend({
     @param {String|Integer} id
     @return {DS.Model|null} record
   */
+  // TODO IDENTIFIER RFC - arg should be resource-identifier
   peekRecord(modelName, id) {
     if (DEBUG) {
       assertDestroyingStore(this, 'peekRecord');
@@ -1254,6 +1253,7 @@ const Store = Service.extend({
     @param {(String|Integer)} id
     @return {Boolean}
   */
+  // TODO IDENTIFIER RFC - arg should be resource-identifier
   hasRecordForId(modelName, id) {
     if (DEBUG) {
       assertDestroyingStore(this, 'hasRecordForId');
@@ -2126,13 +2126,6 @@ const Store = Service.extend({
     }
   },
 
-  filter() {
-    assert(
-      'The filter API has been moved to a plugin. To enable store.filter using an environment flag, or to use an alternative, you can visit the ember-data-filter addon page. https://github.com/ember-data/ember-data-filter',
-      false
-    );
-  },
-
   // ..............
   // . PERSISTING .
   // ..............
@@ -2272,6 +2265,7 @@ const Store = Service.extend({
     @param {string} newId
     @param {number} lid
    */
+  // TODO IDENTIFIER RFC - arg should be resource-identifier
   setRecordId(type, newId, lid) {
     let trueId = coerceId(newId);
     let identifier = recordIdentifierFor(this, { type, lid });
@@ -2858,7 +2852,7 @@ const Store = Service.extend({
     );
   },
 
-  // TODO IDENTIFIER RFC - arg should be identifier
+  // TODO IDENTIFIER RFC - arg should be record-identifier
   createRecordDataFor(modelName, id, clientId, storeWrapper) {
     return new RecordData(modelName, id, clientId, storeWrapper, this);
   },
@@ -2916,9 +2910,6 @@ const Store = Service.extend({
     return serializer.normalize(model, payload);
   },
 
-  newClientId() {
-    return globalClientIdCounter++;
-  },
   /**
     Build a brand new record for a given type, ID, and
     initial data.
