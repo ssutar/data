@@ -2279,7 +2279,7 @@ const Store = Service.extend({
     @param {string} newId
     @param {number} lid
    */
-  // TODO IDENTIFIER RFC - arg should be resource-identifier
+  // TODO IDENTIFIER RFC - arg should be record-identifier
   setRecordId(type, newId, lid) {
     let trueId = coerceId(newId);
     let identifier = recordIdentifierFor(this, { type, lid });
