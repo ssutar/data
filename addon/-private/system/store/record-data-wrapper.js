@@ -39,7 +39,6 @@ export default class RecordDataWrapper {
     let pending = this._pendingManyArrayUpdates;
     this._pendingManyArrayUpdates = [];
     this._willUpdateManyArrays = false;
-    let store = this.store;
 
     for (let i = 0; i < pending.length; i += 2) {
       let identifier = pending[i];
