@@ -408,12 +408,7 @@ const Store = Service.extend({
           });
         }
 
-        let internalModel = this._buildInternalModel(
-          normalizedModelName,
-          properties.id,
-          null,
-          identifier.lid
-        );
+        let internalModel = this._buildInternalModel(identifier);
         internalModel.loadedData();
         // TODO this exists just to proxy `isNew` to RecordData which is weird
         internalModel.didCreateRecord();
@@ -1311,7 +1306,7 @@ const Store = Service.extend({
       return internalModel;
     }
 
-    return this._buildInternalModel(type, id, null, lid);
+    return this._buildInternalModel(identifier);
   },
 
   /**
@@ -2921,30 +2916,22 @@ const Store = Service.extend({
 
     @method _buildInternalModel
     @private
-    @param {String} modelName
-    @param {String} id
-    @param {Object} data
+    @param {IRecordIdentifier} recordIdentifier
     @return {InternalModel} internal model
   */
-  _buildInternalModel(modelName, id, data, clientId) {
+  _buildInternalModel(identifier) {
     heimdall.increment(_buildInternalModel);
-
-    assert(
-      `You can no longer pass a modelClass as the first argument to store._buildInternalModel. Pass modelName instead.`,
-      typeof modelName === 'string'
-    );
-
-    let identifier = recordIdentifierFor(this, { type: modelName, id, lid: clientId });
     let existingInternalModel = this._existingInternalModelFor(identifier);
 
     assert(
-      `The id ${id} has already been used with another record for modelClass '${modelName}'.`,
+      `The id ${identifier.id} has already been used with another record for modelClass '${
+        identifier.type
+      }'.`,
       !existingInternalModel
     );
 
     let internalModel = new InternalModel(this, identifier);
-
-    this._internalModelsFor(modelName).add(internalModel, identifier.lid);
+    this._internalModelsFor(identifier.type).add(internalModel, identifier.lid);
 
     return internalModel;
   },
