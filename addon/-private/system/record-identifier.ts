@@ -108,7 +108,6 @@ function performRecordIdentifierUpdate(
       let newId = coerceId(id);
 
       if (identifier.id !== null && identifier.id !== newId) {
-        debugger;
         throw new Error(
           `The 'id' for a RecordIdentifier cannot be updated once it has been set. Attempted to set id for '${wrapper}' to '${newId}'.`
         );
@@ -217,7 +216,6 @@ export function createRecordIdentifier(store: TStore, resourceIdentifier: TResou
     if (DEBUG) {
       let eid = keyOptions.id[identifier.id];
       if (eid !== undefined) {
-        debugger;
         throw new Error(
           `Attempted to create a new RecordIdentifier '${identifier}' but that id is already in use by '${eid}'`
         );
@@ -261,7 +259,6 @@ export function recordIdentifierFor(
 
   if (DEBUG) {
     if (!hasId && !hasLid) {
-      debugger;
       throw new Error('Resource Identifiers must have either an `id` or an `lid` on them');
     }
   }
