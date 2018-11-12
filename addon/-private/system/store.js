@@ -89,7 +89,6 @@ const {
   _load,
   _pushResource,
   adapterFor,
-  _buildInternalModel,
   _didUpdateAll,
   normalize,
   peekAll,
@@ -101,7 +100,6 @@ const {
   '_load',
   '_pushResource',
   'adapterFor',
-  '_buildInternalModel',
   '_didUpdateAll',
   'normalize',
   'peekAll',
@@ -1282,7 +1280,7 @@ const Store = Service.extend({
     if (internalModel) {
       // unloadRecord is async, if one attempts to unload + then sync push,
       //   we must ensure the unload is canceled before continuing
-      //   The createRecord path will take _existingInternalModelFor()
+      //   The createRecord path will utilize _buildInternalModel()
       //   which will call `destroySync` instead for this unload + then
       //   sync createRecord scenario. Once we have true client-side
       //   delete signaling, we should never call destroySync
@@ -2315,15 +2313,7 @@ const Store = Service.extend({
       lid: coerceId(clientId),
     });
 
-    let existingInternalModel = this._existingInternalModelFor(identifier);
-
-    assert(
-      `'${modelName}' was saved to the server, but the response returned the new id '${id}', which has already been used with another record.'`,
-      isNone(existingInternalModel) || existingInternalModel === internalModel
-    );
-
     updateRecordIdentifier(this, identifier, { type: modelName, id });
-
     internalModel.setId(id);
   },
 
@@ -2909,35 +2899,28 @@ const Store = Service.extend({
     @return {InternalModel} internal model
   */
   _buildInternalModel(identifier) {
-    heimdall.increment(_buildInternalModel);
-    let existingInternalModel = this._existingInternalModelFor(identifier);
-
-    assert(
-      `The id ${identifier.id} has already been used with another record for modelClass '${
-        identifier.type
-      }'.`,
-      !existingInternalModel
-    );
-
-    let internalModel = new InternalModel(this, identifier);
-    setInternalModelFor(identifier, internalModel);
-
-    return internalModel;
-  },
-
-  _existingInternalModelFor(identifier) {
     let internalModel = internalModelFor(identifier);
 
     if (internalModel && internalModel.hasScheduledDestroy()) {
       // unloadRecord is async, if one attempts to unload + then sync create,
       //   we must ensure the unload is complete before starting the create
-      //   The push path will take _internalModelForIdentifier()
+      //   The push path will utilize _internalModelForIdentifier()
       //   which will call `cancelDestroy` instead for this unload + then
       //   sync push scenario. Once we have true client-side
       //   delete signaling, we should never call destroySync
       internalModel.destroySync();
       internalModel = null;
     }
+
+    assert(
+      `The id ${identifier.id} has already been used with another record for modelClass '${
+        identifier.type
+      }'.`,
+      !internalModel
+    );
+
+    internalModel = new InternalModel(this, identifier);
+    setInternalModelFor(identifier, internalModel);
 
     return internalModel;
   },
