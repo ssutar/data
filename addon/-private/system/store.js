@@ -22,7 +22,6 @@ import Model from './model/model';
 import normalizeModelName from './normalize-model-name';
 import IdentityMap from './identity-map';
 import RecordDataWrapper from './store/record-data-wrapper';
-
 import { promiseArray, promiseObject } from './promise-proxies';
 
 import { _bind, _guard, _objectIsAlive, guardDestroyedStore } from './store/common';
@@ -30,6 +29,12 @@ import { _bind, _guard, _objectIsAlive, guardDestroyedStore } from './store/comm
 import { normalizeResponseHelper } from './store/serializer-response';
 import { serializerForAdapter } from './store/serializers';
 import recordDataFor from './record-data-for';
+import {
+  recordIdentifierFor,
+  createRecordIdentifier,
+  updateRecordIdentifier,
+  forgetRecordIdentifier,
+} from './record-identifier';
 
 import {
   _find,
@@ -191,8 +196,6 @@ const Store = Service.extend({
     // internal bookkeeping; not observable
     this.recordArrayManager = new RecordArrayManager({ store: this });
     this._identityMap = new IdentityMap();
-    // To keep track of clientIds for newly created records
-    this._newlyCreated = new IdentityMap();
     this._pendingSave = [];
     this._modelFactoryCache = Object.create(null);
     this._relationshipsDefCache = Object.create(null);
@@ -390,8 +393,27 @@ const Store = Service.extend({
 
         // Coerce ID to a string
         properties.id = coerceId(properties.id);
+        let identifier;
 
-        let internalModel = this._buildInternalModel(normalizedModelName, properties.id);
+        if (properties.id !== null) {
+          // allow return of existing identifiers
+          // for the "sync destroy+create" path
+          identifier = recordIdentifierFor(this, {
+            type: normalizedModelName,
+            id: properties.id,
+          });
+        } else {
+          identifier = createRecordIdentifier(this, {
+            type: normalizedModelName,
+          });
+        }
+
+        let internalModel = this._buildInternalModel(
+          normalizedModelName,
+          properties.id,
+          null,
+          identifier.lid
+        );
         internalModel.loadedData();
         // TODO this exists just to proxy `isNew` to RecordData which is weird
         internalModel.didCreateRecord();
@@ -1249,25 +1271,23 @@ const Store = Service.extend({
     );
 
     let normalizedModelName = normalizeModelName(modelName);
-
     let trueId = coerceId(id);
-    let internalModel = this._internalModelsFor(normalizedModelName).get(trueId);
+    let identifier = recordIdentifierFor(this, { type: normalizedModelName, id: trueId });
+    let internalModel = this._internalModelsFor(normalizedModelName).get(identifier.lid);
 
     return !!internalModel && internalModel.isLoaded();
   },
 
+  _getInternalModelForIdentifier(identifier) {
+    return this._internalModelsFor(identifier.type).get(identifier.lid);
+  },
+
   // directly get an internal model from ID map if it is there, without doing any
   // processing
-  _getInternalModelForId(modelName, id, clientId) {
-    let internalModel;
-    if (clientId) {
-      internalModel = this._newlyCreatedModelsFor(modelName).get(clientId);
-    }
+  _getInternalModelForId(type, id, lid) {
+    let identifier = recordIdentifierFor(this, { type, id, lid });
 
-    if (!internalModel) {
-      internalModel = this._internalModelsFor(modelName).get(id);
-    }
-    return internalModel;
+    return this._getInternalModelForIdentifier(identifier);
   },
 
   _internalModelForId(modelName, id, clientId) {
@@ -1285,7 +1305,7 @@ const Store = Service.extend({
     if (internalModel) {
       // unloadRecord is async, if one attempts to unload + then sync push,
       //   we must ensure the unload is canceled before continuing
-      //   The createRecord path will take _existingInternalModelForId()
+      //   The createRecord path will take _existingInternalModelFor()
       //   which will call `destroySync` instead for this unload + then
       //   sync createRecord scenario. Once we have true client-side
       //   delete signaling, we should never call destroySync
@@ -2305,15 +2325,19 @@ const Store = Service.extend({
       return;
     }
 
-    let existingInternalModel = this._existingInternalModelForId(modelName, id);
+    let identifier = recordIdentifierFor(this, {
+      type: modelName,
+      lid: coerceId(clientId),
+    });
+
+    let existingInternalModel = this._existingInternalModelFor(identifier);
 
     assert(
       `'${modelName}' was saved to the server, but the response returned the new id '${id}', which has already been used with another record.'`,
       isNone(existingInternalModel) || existingInternalModel === internalModel
     );
 
-    this._internalModelsFor(internalModel.modelName).set(id, internalModel);
-    this._newlyCreatedModelsFor(internalModel.modelName).remove(internalModel, clientId);
+    updateRecordIdentifier(this, identifier, { type: modelName, id });
 
     internalModel.setId(id);
   },
@@ -2329,10 +2353,6 @@ const Store = Service.extend({
   _internalModelsFor(modelName) {
     heimdall.increment(_internalModelsFor);
     return this._identityMap.retrieve(modelName);
-  },
-
-  _newlyCreatedModelsFor(modelName) {
-    return this._newlyCreated.retrieve(modelName);
   },
 
   // ................
@@ -2839,14 +2859,7 @@ const Store = Service.extend({
   },
 
   _internalModelForResource(resource) {
-    let internalModel;
-    if (resource.clientId) {
-      internalModel = this._newlyCreatedModelsFor(resource.type).get(resource.clientId);
-    }
-    if (!internalModel) {
-      internalModel = this._internalModelForId(resource.type, resource.id);
-    }
-    return internalModel;
+    return this._internalModelForId(resource.type, resource.id, resource.lid);
   },
 
   _createRecordData(modelName, id, clientId, internalModel) {
@@ -2925,26 +2938,23 @@ const Store = Service.extend({
       typeof modelName === 'string'
     );
 
-    let existingInternalModel = this._existingInternalModelForId(modelName, id);
+    let identifier = recordIdentifierFor(this, { type: modelName, id, lid: clientId });
+    let existingInternalModel = this._existingInternalModelFor(identifier);
 
     assert(
       `The id ${id} has already been used with another record for modelClass '${modelName}'.`,
       !existingInternalModel
     );
 
-    let identifier = recordIdentifierFor(this, { type: modelName, id, lid: clientId });
     let internalModel = new InternalModel(this, identifier);
-    if (clientId) {
-      this._newlyCreatedModelsFor(modelName).add(internalModel, clientId);
-    }
 
-    this._internalModelsFor(modelName).add(internalModel, id);
+    this._internalModelsFor(modelName).add(internalModel, identifier.lid);
 
     return internalModel;
   },
 
-  _existingInternalModelForId(modelName, id) {
-    let internalModel = this._internalModelsFor(modelName).get(id);
+  _existingInternalModelFor(identifier) {
+    let internalModel = this._internalModelsFor(identifier.type).get(identifier.lid);
 
     if (internalModel && internalModel.hasScheduledDestroy()) {
       // unloadRecord is async, if one attempts to unload + then sync create,
@@ -2956,6 +2966,7 @@ const Store = Service.extend({
       internalModel.destroySync();
       internalModel = null;
     }
+
     return internalModel;
   },
 
@@ -2980,11 +2991,14 @@ const Store = Service.extend({
     @param {InternalModel} internalModel
   */
   _removeFromIdMap(internalModel) {
-    let recordMap = this._internalModelsFor(internalModel.modelName);
-    let id = internalModel.id;
+    let { modelName, id, clientId } = internalModel;
+    let identifier = recordIdentifierFor(this, { type: modelName, id, lid: clientId });
+    let recordMap = this._internalModelsFor(modelName);
 
-    recordMap.remove(internalModel, id);
-    //TODO IGOR DAVID remove from client id map
+    recordMap.remove(internalModel, clientId);
+
+    // allow this identifier to be reused by a different record
+    forgetRecordIdentifier(this, identifier);
   },
 
   // ......................
