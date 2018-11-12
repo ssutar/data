@@ -248,7 +248,7 @@ export default class Snapshot {
     let value = relationship.getData();
     let data = value && value.data;
     let identifier = data && recordIdentifierFor(store, data);
-    inverseInternalModel = identifier && store._internalModelForIdentifier(identifier);
+    inverseInternalModel = identifier && store._getOrCreateInternalModelFor(identifier);
 
     if (data !== undefined /* allow null */) {
       if (inverseInternalModel && !inverseInternalModel.isDeleted()) {
@@ -334,7 +334,7 @@ export default class Snapshot {
       value.data.forEach(member => {
         // TODO IDENTIFIER RFC - member should be record-identifier already
         let identifier = recordIdentifierFor(store, member);
-        let internalModel = store._internalModelForIdentifier(identifier);
+        let internalModel = store._getOrCreateInternalModelFor(identifier);
         if (!internalModel.isDeleted()) {
           if (ids) {
             results.push(member.id);

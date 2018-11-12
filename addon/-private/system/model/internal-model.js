@@ -490,7 +490,7 @@ export default class InternalModel {
 
     if (isAsync) {
       let internalModel =
-        identifier !== null ? store._internalModelForIdentifier(identifier) : null;
+        identifier !== null ? store._getOrCreateInternalModelFor(identifier) : null;
       return PromiseBelongsTo.create({
         _belongsToState: resource._relationship,
         promise: store._findBelongsToByJsonApiResource(
@@ -505,7 +505,7 @@ export default class InternalModel {
       if (identifier === null) {
         return null;
       } else {
-        let internalModel = store._internalModelForIdentifier(identifier);
+        let internalModel = store._getOrCreateInternalModelFor(identifier);
         let toReturn = internalModel.getRecord();
         assert(
           "You looked up the '" +

@@ -109,7 +109,7 @@ export const PromiseBelongsTo = PromiseObject.extend({
     let resource = state.recordData.getResourceIdentifier();
     // TODO IDENTIFIER RFC - get identifier via weakmap to record-data
     let identifier = recordIdentifierFor(store, resource);
-    let internalModel = store._internalModelForIdentifier(identifier);
+    let internalModel = store._getOrCreateInternalModelFor(identifier);
 
     return store.reloadBelongsTo(this, internalModel, key, options).then(() => this);
   },

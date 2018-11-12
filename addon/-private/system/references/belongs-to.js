@@ -198,7 +198,7 @@ export default class BelongsToReference extends Reference {
     if (resource && resource.data) {
       // TODO IDENTIFIER RFC - resource.data should be identifier already
       let identifier = recordIdentifierFor(this.store, resource.data);
-      let inverseInternalModel = store._internalModelForIdentifier(identifier);
+      let inverseInternalModel = store._getOrCreateInternalModelFor(identifier);
       if (inverseInternalModel && inverseInternalModel.isLoaded()) {
         return inverseInternalModel.getRecord();
       }
@@ -330,7 +330,7 @@ export default class BelongsToReference extends Reference {
     if (resource && resource.data) {
       // TODO IDENTIFIER RFC - resource.data should be identifier already
       let identifier = recordIdentifierFor(this.store, resource.data);
-      let internalModel = this.store._internalModelForIdentifier(identifier);
+      let internalModel = this.store._getOrCreateInternalModelFor(identifier);
       if (internalModel.isLoaded()) {
         return internalModel.reload(options).then(internalModel => {
           if (internalModel) {

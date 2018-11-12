@@ -390,7 +390,7 @@ const Store = Service.extend({
         let identifier;
 
         if (properties.id !== null) {
-          // allow return of existing identifiers
+          // allows return of existing identifiers
           // for the "sync destroy+create" path
           identifier = recordIdentifierFor(this, {
             type: normalizedModelName,
@@ -402,7 +402,7 @@ const Store = Service.extend({
           });
         }
 
-        let internalModel = this._buildInternalModel(identifier);
+        let internalModel = this._createInternalModel(identifier);
         internalModel.loadedData();
         // TODO this exists just to proxy `isNew` to RecordData which is weird
         internalModel.didCreateRecord();
@@ -770,7 +770,7 @@ const Store = Service.extend({
     let normalizedId = coerceId(id);
     let identifier = recordIdentifierFor(this, { type, id: normalizedId });
 
-    let internalModel = this._internalModelForIdentifier(identifier);
+    let internalModel = this._getOrCreateInternalModelFor(identifier);
     options = options || {};
 
     if (!this.hasRecordForId(type, normalizedId)) {
@@ -1154,7 +1154,7 @@ const Store = Service.extend({
     let normalizedId = coerceId(id);
     let identifier = recordIdentifierFor(this, { type, id: normalizedId });
 
-    return this._internalModelForIdentifier(identifier).recordReference;
+    return this._getOrCreateInternalModelFor(identifier).recordReference;
   },
 
   /**
@@ -1200,7 +1200,7 @@ const Store = Service.extend({
     let identifier = recordIdentifierFor(this, { type, id: normalizedId });
 
     if (this.hasRecordForId(type, normalizedId)) {
-      return this._internalModelForIdentifier(identifier).getRecord();
+      return this._getOrCreateInternalModelFor(identifier).getRecord();
     } else {
       return null;
     }
@@ -1274,13 +1274,13 @@ const Store = Service.extend({
     return internalModel !== null && internalModel.isLoaded();
   },
 
-  _internalModelForIdentifier(identifier) {
+  _getOrCreateInternalModelFor(identifier) {
     let internalModel = internalModelFor(identifier);
 
     if (internalModel) {
       // unloadRecord is async, if one attempts to unload + then sync push,
       //   we must ensure the unload is canceled before continuing
-      //   The createRecord path will utilize _buildInternalModel()
+      //   The createRecord path will utilize _createInternalModel() directly
       //   which will call `destroySync` instead for this unload + then
       //   sync createRecord scenario. Once we have true client-side
       //   delete signaling, we should never call destroySync
@@ -1291,7 +1291,7 @@ const Store = Service.extend({
       return internalModel;
     }
 
-    return this._buildInternalModel(identifier);
+    return this._createInternalModel(identifier);
   },
 
   /**
@@ -1399,7 +1399,7 @@ const Store = Service.extend({
       // TODO IDENTIFIER RFC - resource.data should be record-identifier already
       let internalModels = resource.data.map(json => {
         let identifier = recordIdentifierFor(this, json);
-        return this._internalModelForIdentifier(identifier);
+        return this._getOrCreateInternalModelFor(identifier);
       });
 
       return this.findMany(internalModels, options);
@@ -1412,7 +1412,7 @@ const Store = Service.extend({
       // TODO IDENTIFIER RFC - resource.data should be record-identifier already
       let internalModels = resource.data.map(json => {
         let identifier = recordIdentifierFor(this, json);
-        return this._internalModelForIdentifier(identifier);
+        return this._getOrCreateInternalModelFor(identifier);
       });
 
       return this._scheduleFetchMany(internalModels, options);
@@ -1429,7 +1429,7 @@ const Store = Service.extend({
       // TODO IDENTIFIER RFC - resource.data should be record-identifiers already
       internalModels = resource.data.map(reference => {
         let identifier = recordIdentifierFor(this, reference);
-        return this._internalModelForIdentifier(identifier);
+        return this._getOrCreateInternalModelFor(identifier);
       });
     }
     return internalModels;
@@ -1491,7 +1491,7 @@ const Store = Service.extend({
 
     // TODO IDENTIFIER RFC - resource.data should be record-identifier already
     let identifier = resource.data ? recordIdentifierFor(this, resource.data) : null;
-    let internalModel = identifier ? this._internalModelForIdentifier(identifier) : null;
+    let internalModel = identifier ? this._getOrCreateInternalModelFor(identifier) : null;
     let {
       relationshipIsStale,
       allInverseRecordsAreLoaded,
@@ -2333,7 +2333,7 @@ const Store = Service.extend({
     let type = normalizeModelName(data.type);
     let id = coerceId(data.id);
     let identifier = recordIdentifierFor(this, { type, id });
-    let internalModel = this._internalModelForIdentifier(identifier);
+    let internalModel = this._getOrCreateInternalModelFor(identifier);
 
     let isUpdate = internalModel.currentState.isEmpty === false;
 
@@ -2839,7 +2839,7 @@ const Store = Service.extend({
   // TODO IDENTIFIER RFC - arg should be resource-identifier
   recordDataFor(type, id, lid) {
     let identifier = recordIdentifierFor(this, { type, id, lid });
-    let internalModel = this._internalModelForIdentifier(identifier);
+    let internalModel = this._getOrCreateInternalModelFor(identifier);
 
     return recordDataFor(internalModel);
   },
@@ -2849,7 +2849,7 @@ const Store = Service.extend({
     let resource = recordData.getResourceIdentifier();
     let identifier = recordIdentifierFor(this, resource);
 
-    return this._internalModelForIdentifier(identifier);
+    return this._getOrCreateInternalModelFor(identifier);
   },
 
   /**
@@ -2893,23 +2893,24 @@ const Store = Service.extend({
     Build a brand new record for a given type, ID, and
     initial data.
 
-    @method _buildInternalModel
+    @method _createInternalModel
     @private
     @param {IRecordIdentifier} recordIdentifier
     @return {InternalModel} internal model
   */
-  _buildInternalModel(identifier) {
+  _createInternalModel(identifier) {
     let internalModel = internalModelFor(identifier);
 
     if (internalModel && internalModel.hasScheduledDestroy()) {
       // unloadRecord is async, if one attempts to unload + then sync create,
       //   we must ensure the unload is complete before starting the create
-      //   The push path will utilize _internalModelForIdentifier()
+      //   The push path will utilize _getOrCreateInternalModelFor()
       //   which will call `cancelDestroy` instead for this unload + then
       //   sync push scenario. Once we have true client-side
       //   delete signaling, we should never call destroySync
       internalModel.destroySync();
       internalModel = null;
+      identifier = createRecordIdentifier(this, { type: identifier.type, id: identifier.id });
     }
 
     assert(
@@ -3221,7 +3222,7 @@ const Store = Service.extend({
     );
 
     let identifier = recordIdentifierFor(this, resourceIdentifier);
-    return this._internalModelForIdentifier(identifier);
+    return this._getOrCreateInternalModelFor(identifier);
   },
 
   _pushResourceIdentifiers(relationship, resourceIdentifiers) {

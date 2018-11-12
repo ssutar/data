@@ -1,12 +1,8 @@
-import {
-  recordIdentifierFor,
-  internalModelFor as _internalModelFor,
-  internalModelsFor as _internalModelsFor,
-} from 'ember-data/-private';
+import { recordIdentifierFor, internalModelsFor as _internalModelsFor } from 'ember-data/-private';
 
 export default function internalModelFor(store, type, id) {
   let identifier = recordIdentifierFor(store, { type, id });
-  return _internalModelFor(identifier);
+  return store._getOrCreateInternalModelFor(identifier);
 }
 
 export function internalModelsFor(store, type) {
