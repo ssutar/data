@@ -43,11 +43,7 @@ export default class RecordDataWrapper {
     for (let i = 0; i < pending.length; i += 2) {
       let identifier = pending[i];
       let key = pending[i + 1];
-      let internalModel = store._getInternalModelForId(
-        identifier.type,
-        identifier.id,
-        identifier.lid
-      );
+      let internalModel = store._getInternalModelForIdentifier(identifier);
       internalModel.notifyHasManyChange(key);
     }
   }
@@ -73,11 +69,7 @@ export default class RecordDataWrapper {
   // TODO IDENTIFIER RFC - arg should be identifier
   notifyPropertyChange(type, id, lid, key) {
     let identifier = recordIdentifierFor(this.store, { type, id, lid });
-    let internalModel = this.store._getInternalModelForId(
-      identifier.type,
-      identifier.id,
-      identifier.lid
-    );
+    let internalModel = this.store._getInternalModelForIdentifier(identifier);
 
     internalModel.notifyPropertyChange(key);
   }
@@ -106,11 +98,7 @@ export default class RecordDataWrapper {
   // TODO IDENTIFIER RFC - arg should be identifier
   isRecordInUse(type, id, lid) {
     let identifier = recordIdentifierFor(this.store, { type, id, lid });
-    let internalModel = this.store._getInternalModelForId(
-      identifier.type,
-      identifier.id,
-      identifier.lid
-    );
+    let internalModel = this.store._getInternalModelForIdentifier(identifier);
 
     if (!internalModel) {
       return false;
@@ -121,11 +109,7 @@ export default class RecordDataWrapper {
   // TODO IDENTIFIER RFC - arg should be identifier
   disconnectRecord(type, id, lid) {
     let identifier = recordIdentifierFor(this.store, { type, id, lid });
-    let internalModel = this.store._getInternalModelForId(
-      identifier.type,
-      identifier.id,
-      identifier.lid
-    );
+    let internalModel = this.store._getInternalModelForIdentifier(identifier);
 
     if (internalModel) {
       internalModel.destroyFromRecordData();
