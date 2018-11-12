@@ -14,6 +14,11 @@ interface IKeyOptions {
   id: TDict<Tid, IRecordIdentifier>;
 }
 
+interface IDeprecatedResourceIdentifier extends IResourceIdentifier {
+  clientId?: string;
+  toString(): string;
+}
+
 type TTypeMap = TDict<TmodelName, IKeyOptions>;
 
 let CLIENT_ID = 0;
@@ -29,7 +34,9 @@ function generateLid(): string {
 
 const STORE_MAP = new WeakMap<TStore, TTypeMap>();
 
-function makeRecordIdentifier(resourceIdentifier: IResourceIdentifier): IRecordIdentifier {
+function makeRecordIdentifier(
+  resourceIdentifier: IResourceIdentifier
+): IRecordIdentifier | IDeprecatedResourceIdentifier {
   let lid = coerceId(resourceIdentifier.lid);
 
   // TODO we may not want to fall back to ID if we want a global lookup of lid
@@ -38,9 +45,10 @@ function makeRecordIdentifier(resourceIdentifier: IResourceIdentifier): IRecordI
   // lid = lid === null ? coerceId(resourceIdentifier.id) : lid;
   lid = lid === null ? generateLid() : lid;
 
-  let recordIdentifier: IRecordIdentifier = {
+  let recordIdentifier: IDeprecatedResourceIdentifier = {
     lid,
     id: coerceId(resourceIdentifier.id),
+    clientId: lid,
     type: resourceIdentifier.type,
     meta: resourceIdentifier.meta || null,
   };
@@ -48,8 +56,12 @@ function makeRecordIdentifier(resourceIdentifier: IResourceIdentifier): IRecordI
   if (DEBUG) {
     // we enforce immutability in dev
     //  but preserve our ability to do controlled updates to the reference
-    let wrapper: IRecordIdentifier = {
+    let wrapper: IDeprecatedResourceIdentifier = {
       get lid() {
+        return recordIdentifier.lid;
+      },
+      // TODO deprecate this prop
+      get clientId() {
         return recordIdentifier.lid;
       },
       get id() {
@@ -219,10 +231,6 @@ export function createRecordIdentifier(
   keyOptions.lid[identifier.lid] = identifier;
 
   return identifier;
-}
-
-interface IDeprecatedResourceIdentifier extends IResourceIdentifier {
-  clientId?: string;
 }
 
 export function recordIdentifierFor(
