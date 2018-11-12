@@ -1371,22 +1371,6 @@ test('store should reload all records in the background when `shouldBackgroundRe
   return done;
 });
 
-testInDebug('store should assert of the user tries to call store.filter', function(assert) {
-  assert.expect(1);
-
-  const Person = DS.Model.extend({
-    name: DS.attr('string'),
-  });
-
-  store = createStore({
-    person: Person,
-  });
-
-  assert.expectAssertion(() => {
-    run(() => store.filter('person', {}));
-  }, /The filter API has been moved to a plugin/);
-});
-
 testInDebug('Calling adapterFor with a model class should assert', function(assert) {
   const Person = DS.Model.extend({
     name: DS.attr('string'),
