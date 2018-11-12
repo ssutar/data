@@ -1276,14 +1276,8 @@ const Store = Service.extend({
     return internalModel !== null && internalModel.isLoaded();
   },
 
-  // directly get an internal model from ID map if it is there, without doing any
-  // processing
-  _getInternalModelForIdentifier(identifier) {
-    return internalModelFor(identifier);
-  },
-
   _internalModelForIdentifier(identifier) {
-    let internalModel = this._getInternalModelForIdentifier(identifier);
+    let internalModel = internalModelFor(identifier);
 
     if (internalModel) {
       // unloadRecord is async, if one attempts to unload + then sync push,
@@ -2283,7 +2277,7 @@ const Store = Service.extend({
   setRecordId(type, newId, lid) {
     let trueId = coerceId(newId);
     let identifier = recordIdentifierFor(this, { type, lid });
-    let internalModel = this._getInternalModelForIdentifier(identifier);
+    let internalModel = internalModelFor(identifier);
     this._setRecordId(internalModel, trueId, lid);
   },
 

@@ -1,4 +1,5 @@
 import { recordIdentifierFor } from '../cache/record-identifier';
+import { internalModelFor } from '../cache/internal-model-for';
 
 export default class RecordDataWrapper {
   constructor(store) {
@@ -43,7 +44,7 @@ export default class RecordDataWrapper {
     for (let i = 0; i < pending.length; i += 2) {
       let identifier = pending[i];
       let key = pending[i + 1];
-      let internalModel = store._getInternalModelForIdentifier(identifier);
+      let internalModel = internalModelFor(identifier);
       internalModel.notifyHasManyChange(key);
     }
   }
@@ -69,7 +70,7 @@ export default class RecordDataWrapper {
   // TODO IDENTIFIER RFC - arg should be identifier
   notifyPropertyChange(type, id, lid, key) {
     let identifier = recordIdentifierFor(this.store, { type, id, lid });
-    let internalModel = this.store._getInternalModelForIdentifier(identifier);
+    let internalModel = internalModelFor(identifier);
 
     internalModel.notifyPropertyChange(key);
   }
@@ -98,7 +99,7 @@ export default class RecordDataWrapper {
   // TODO IDENTIFIER RFC - arg should be identifier
   isRecordInUse(type, id, lid) {
     let identifier = recordIdentifierFor(this.store, { type, id, lid });
-    let internalModel = this.store._getInternalModelForIdentifier(identifier);
+    let internalModel = internalModelFor(identifier);
 
     if (!internalModel) {
       return false;
@@ -109,7 +110,7 @@ export default class RecordDataWrapper {
   // TODO IDENTIFIER RFC - arg should be identifier
   disconnectRecord(type, id, lid) {
     let identifier = recordIdentifierFor(this.store, { type, id, lid });
-    let internalModel = this.store._getInternalModelForIdentifier(identifier);
+    let internalModel = internalModelFor(identifier);
 
     if (internalModel) {
       internalModel.destroyFromRecordData();
