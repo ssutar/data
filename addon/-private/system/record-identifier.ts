@@ -35,7 +35,7 @@ function makeRecordIdentifier(resourceIdentifier: IResourceIdentifier): IRecordI
   // TODO we may not want to fall back to ID if we want a global lookup of lid
   //   but if we maintain buckets scoped by type this is ok.
   //   polymorphism may be easier with non-scoped buckets and uniform lid
-  lid = lid === null ? coerceId(resourceIdentifier.id) : lid;
+  // lid = lid === null ? coerceId(resourceIdentifier.id) : lid;
   lid = lid === null ? generateLid() : lid;
 
   let recordIdentifier: IRecordIdentifier = {
@@ -79,13 +79,14 @@ function performRecordIdentifierUpdate(
   { meta, type, id, lid }: IResourceIdentifier
 ) {
   if (DEBUG) {
-    identifier = DEBUG_MAP.get(identifier);
+    let wrapper = identifier;
+    identifier = DEBUG_MAP.get(wrapper);
 
     if (lid !== undefined) {
       let newLid = coerceId(lid);
       if (newLid !== identifier.lid) {
         throw new Error(
-          `The 'lid' for a RecordIdentifier cannot be updated once it has been created. Attempted to set lid for '${identifier}' to '${lid}'.`
+          `The 'lid' for a RecordIdentifier cannot be updated once it has been created. Attempted to set lid for '${wrapper}' to '${lid}'.`
         );
       }
     }
@@ -94,8 +95,9 @@ function performRecordIdentifierUpdate(
       let newId = coerceId(id);
 
       if (identifier.id !== null && identifier.id !== newId) {
+        debugger;
         throw new Error(
-          `The 'id' for a RecordIdentifier cannot be updated once it has been set. Attempted to set id for '${identifier}' to '${newId}'.`
+          `The 'id' for a RecordIdentifier cannot be updated once it has been set. Attempted to set id for '${wrapper}' to '${newId}'.`
         );
       }
     }
@@ -103,7 +105,7 @@ function performRecordIdentifierUpdate(
     // TODO consider how to support both single and multi table polymorphism
     if (type !== identifier.type) {
       throw new Error(
-        `The 'type' for a RecordIdentifier cannot be updated once it has been set. Attempted to set type for '${identifier}' to '${type}'.`
+        `The 'type' for a RecordIdentifier cannot be updated once it has been set. Attempted to set type for '${wrapper}' to '${type}'.`
       );
     }
   }
@@ -219,19 +221,32 @@ export function createRecordIdentifier(
   return identifier;
 }
 
+interface IDeprecatedResourceIdentifier extends IResourceIdentifier {
+  clientId?: string;
+}
+
 export function recordIdentifierFor(
   store: TStore,
-  resourceIdentifier: IResourceIdentifier
+  resourceIdentifier: IDeprecatedResourceIdentifier
 ): IRecordIdentifier | null {
+  let clientId = coerceId(resourceIdentifier.clientId);
   let keyOptions = getLookupBucket(store, resourceIdentifier.type);
   let identifier: IRecordIdentifier | null = null;
   let lid = coerceId(resourceIdentifier.lid);
+
+  if (lid === null && clientId !== null) {
+    console.trace('Deprecated use of clientId');
+    lid = clientId;
+    resourceIdentifier.lid = clientId;
+  }
+
   let id = coerceId(resourceIdentifier.id);
   let hasLid = isNonEmptyString(lid);
   let hasId = isNonEmptyString(id);
 
   if (DEBUG) {
     if (!hasId && !hasLid) {
+      debugger;
       throw new Error('Resource Identifiers must have either an `id` or an `lid` on them');
     }
   }
