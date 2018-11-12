@@ -6,7 +6,7 @@ import EmberError from '@ember/error';
 import { get } from '@ember/object';
 import { assign } from '@ember/polyfills';
 import { relationshipStateFor } from './record-data-for';
-import { recordIdentifierFor } from './record-identifier';
+import { recordIdentifierFor } from './cache/record-identifier';
 
 /**
   @class Snapshot

@@ -5,7 +5,7 @@ import { get, computed } from '@ember/object';
 import { reads } from '@ember/object/computed';
 import { Promise } from 'rsvp';
 import { assert } from '@ember/debug';
-import { recordIdentifierFor } from './record-identifier';
+import { recordIdentifierFor } from './cache/record-identifier';
 
 /**
   A `PromiseArray` is an object that acts like both an `Ember.Array`

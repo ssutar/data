@@ -34,7 +34,7 @@ import {
   createRecordIdentifier,
   updateRecordIdentifier,
   forgetRecordIdentifier,
-} from './record-identifier';
+} from './cache/record-identifier';
 
 import {
   _find,

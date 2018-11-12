@@ -1,4 +1,4 @@
-import { recordIdentifierFor } from '../record-identifier';
+import { recordIdentifierFor } from '../cache/record-identifier';
 
 export default class RecordDataWrapper {
   constructor(store) {

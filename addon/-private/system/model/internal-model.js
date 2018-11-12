@@ -16,7 +16,7 @@ import { PromiseBelongsTo, PromiseManyArray } from '../promise-proxies';
 
 import { RecordReference, BelongsToReference, HasManyReference } from '../references';
 import { default as recordDataFor, relationshipStateFor } from '../record-data-for';
-import { recordIdentifierFor } from '../record-identifier';
+import { recordIdentifierFor } from '../cache/record-identifier';
 
 /*
   The TransitionChainMap caches the `state.enters`, `state.setups`, and final state reached

@@ -1,5 +1,5 @@
-import Store from './store';
-import coerceId from './coerce-id';
+import Store from '../store';
+import coerceId from '../coerce-id';
 import { DEBUG } from '@glimmer/env';
 import {
   TDict,
@@ -7,7 +7,7 @@ import {
   // IRecordIdentifier,
   IDeprecatedRecordIdentifier,
   IDeprecatedResourceIdentifier,
-} from '../types';
+} from '../../types';
 import { assert } from '@ember/debug';
 
 type TStore = InstanceType<typeof Store>;
