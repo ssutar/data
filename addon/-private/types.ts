@@ -20,3 +20,12 @@ export interface IRecordIdentifier extends IResourceIdentifier {
   type: string;
   meta: TMeta | null;
 }
+
+export interface IDeprecatedResourceIdentifier extends IResourceIdentifier {
+  clientId?: string;
+}
+
+export interface IDeprecatedRecordIdentifier extends IRecordIdentifier {
+  clientId?: string;
+  toString(): string;
+}

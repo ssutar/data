@@ -1,22 +1,25 @@
 import Store from './store';
 import coerceId from './coerce-id';
 import { DEBUG } from '@glimmer/env';
-import { TDict, IResourceIdentifier, IRecordIdentifier } from '../types';
+import {
+  TDict,
+  // IResourceIdentifier,
+  // IRecordIdentifier,
+  IDeprecatedRecordIdentifier,
+  IDeprecatedResourceIdentifier,
+} from '../types';
 import { assert } from '@ember/debug';
 
 type TStore = InstanceType<typeof Store>;
 type TmodelName = string;
 type TclientId = string;
 type Tid = string;
+type TIdentifier = IDeprecatedRecordIdentifier;
+type TResource = IDeprecatedResourceIdentifier;
 
 interface IKeyOptions {
-  lid: TDict<TclientId, IRecordIdentifier>;
-  id: TDict<Tid, IRecordIdentifier>;
-}
-
-interface IDeprecatedResourceIdentifier extends IResourceIdentifier {
-  clientId?: string;
-  toString(): string;
+  lid: TDict<TclientId, TIdentifier>;
+  id: TDict<Tid, TIdentifier>;
 }
 
 type TTypeMap = TDict<TmodelName, IKeyOptions>;
@@ -25,7 +28,7 @@ let CLIENT_ID = 0;
 let DEBUG_MAP;
 
 if (DEBUG) {
-  DEBUG_MAP = new WeakMap<IRecordIdentifier, IRecordIdentifier>();
+  DEBUG_MAP = new WeakMap<TIdentifier, TIdentifier>();
 }
 
 function generateLid(): string {
@@ -34,9 +37,7 @@ function generateLid(): string {
 
 const STORE_MAP = new WeakMap<TStore, TTypeMap>();
 
-function makeRecordIdentifier(
-  resourceIdentifier: IResourceIdentifier
-): IRecordIdentifier | IDeprecatedResourceIdentifier {
+function makeRecordIdentifier(resourceIdentifier: TResource): TIdentifier {
   let lid = coerceId(resourceIdentifier.lid);
 
   // TODO we may not want to fall back to ID if we want a global lookup of lid
@@ -45,7 +46,7 @@ function makeRecordIdentifier(
   // lid = lid === null ? coerceId(resourceIdentifier.id) : lid;
   lid = lid === null ? generateLid() : lid;
 
-  let recordIdentifier: IDeprecatedResourceIdentifier = {
+  let recordIdentifier: TIdentifier = {
     lid,
     id: coerceId(resourceIdentifier.id),
     clientId: lid,
@@ -56,7 +57,7 @@ function makeRecordIdentifier(
   if (DEBUG) {
     // we enforce immutability in dev
     //  but preserve our ability to do controlled updates to the reference
-    let wrapper: IDeprecatedResourceIdentifier = {
+    let wrapper: TIdentifier = {
       get lid() {
         return recordIdentifier.lid;
       },
@@ -87,8 +88,8 @@ function makeRecordIdentifier(
 }
 
 function performRecordIdentifierUpdate(
-  identifier: IRecordIdentifier,
-  { meta, type, id, lid }: IResourceIdentifier
+  identifier: TIdentifier,
+  { meta, type, id, lid }: TResource
 ) {
   if (DEBUG) {
     let wrapper = identifier;
@@ -151,8 +152,8 @@ function performRecordIdentifierUpdate(
  */
 export function updateRecordIdentifier(
   store: TStore,
-  identifier: IRecordIdentifier,
-  resourceIdentifier: IResourceIdentifier
+  identifier: TIdentifier,
+  resourceIdentifier: TResource
 ): void {
   if (DEBUG) {
     assert(
@@ -208,10 +209,7 @@ function isNonEmptyString(str?: string | null): str is string {
   return typeof str === 'string' && str.length > 0;
 }
 
-export function createRecordIdentifier(
-  store: TStore,
-  resourceIdentifier: IResourceIdentifier
-): IRecordIdentifier {
+export function createRecordIdentifier(store: TStore, resourceIdentifier: TResource): TIdentifier {
   let keyOptions = getLookupBucket(store, resourceIdentifier.type);
   let identifier = makeRecordIdentifier(resourceIdentifier);
 
@@ -219,6 +217,7 @@ export function createRecordIdentifier(
     if (DEBUG) {
       let eid = keyOptions.id[identifier.id];
       if (eid !== undefined) {
+        debugger;
         throw new Error(
           `Attempted to create a new RecordIdentifier '${identifier}' but that id is already in use by '${eid}'`
         );
@@ -233,13 +232,21 @@ export function createRecordIdentifier(
   return identifier;
 }
 
+export function forgetRecordIdentifier(store: TStore, identifier: TIdentifier) {
+  let keyOptions = getLookupBucket(store, identifier.type);
+  if (identifier.id !== null) {
+    delete keyOptions.id[identifier.id];
+  }
+  delete keyOptions.lid[identifier.lid];
+}
+
 export function recordIdentifierFor(
   store: TStore,
-  resourceIdentifier: IDeprecatedResourceIdentifier
-): IRecordIdentifier | null {
+  resourceIdentifier: TResource
+): TIdentifier | null {
   let clientId = coerceId(resourceIdentifier.clientId);
   let keyOptions = getLookupBucket(store, resourceIdentifier.type);
-  let identifier: IRecordIdentifier | null = null;
+  let identifier: TIdentifier | null = null;
   let lid = coerceId(resourceIdentifier.lid);
 
   if (lid === null && clientId !== null) {
