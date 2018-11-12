@@ -2849,10 +2849,16 @@ const Store = Service.extend({
     return this._internalModelForIdentifier(identifier);
   },
 
-  _createRecordData(modelName, id, clientId, internalModel) {
-    return this.createRecordDataFor(modelName, id, clientId, this.recordDataWrapper);
+  _createRecordData(identifier) {
+    return this.createRecordDataFor(
+      identifier.type,
+      identifier.id,
+      identifier.lid,
+      this.recordDataWrapper
+    );
   },
 
+  // TODO IDENTIFIER RFC - arg should be identifier
   createRecordDataFor(modelName, id, clientId, storeWrapper) {
     return new RecordData(modelName, id, clientId, storeWrapper, this);
   },

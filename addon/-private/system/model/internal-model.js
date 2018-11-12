@@ -90,12 +90,7 @@ export default class InternalModel {
     this.store = store;
     this.modelName = identifier.type;
     this.clientId = identifier.lid;
-    this._recordData = store._createRecordData(
-      identifier.type,
-      identifier.id,
-      identifier.lid,
-      this
-    );
+    this._recordData = store._createRecordData(identifier);
 
     // this ensure ordered set can quickly identify this as unique
     this[Ember.GUID_KEY] = InternalModelReferenceId++ + 'internal-model';
