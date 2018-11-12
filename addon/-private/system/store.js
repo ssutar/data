@@ -1278,19 +1278,13 @@ const Store = Service.extend({
     return !!internalModel && internalModel.isLoaded();
   },
 
+  // directly get an internal model from ID map if it is there, without doing any
+  // processing
   _getInternalModelForIdentifier(identifier) {
     return this._internalModelsFor(identifier.type).get(identifier.lid);
   },
 
-  // directly get an internal model from ID map if it is there, without doing any
-  // processing
-  _getInternalModelForId(type, id, lid) {
-    let identifier = recordIdentifierFor(this, { type, id, lid });
-
-    return this._getInternalModelForIdentifier(identifier);
-  },
-
-  _internalModelForId(modelName, id, clientId) {
+  _internalModelForId(type, id, lid) {
     heimdall.increment(_internalModelForId);
 
     if (DEBUG) {
@@ -1300,7 +1294,8 @@ const Store = Service.extend({
       }
     }
 
-    let internalModel = this._getInternalModelForId(modelName, id, clientId);
+    let identifier = recordIdentifierFor(this, { type, id, lid });
+    let internalModel = this._getInternalModelForIdentifier(identifier);
 
     if (internalModel) {
       // unloadRecord is async, if one attempts to unload + then sync push,
@@ -1316,7 +1311,7 @@ const Store = Service.extend({
       return internalModel;
     }
 
-    return this._buildInternalModel(modelName, id, null, clientId);
+    return this._buildInternalModel(type, id, null, lid);
   },
 
   /**
@@ -2286,14 +2281,15 @@ const Store = Service.extend({
 
     @method setRecordId
     @private
-    @param {String} modelName
+    @param {String} type
     @param {string} newId
-    @param {number} clientId
+    @param {number} lid
    */
-  setRecordId(modelName, newId, clientId) {
+  setRecordId(type, newId, lid) {
     let trueId = coerceId(newId);
-    let internalModel = this._getInternalModelForId(modelName, trueId, clientId);
-    this._setRecordId(internalModel, newId, clientId);
+    let identifier = recordIdentifierFor(this, { type, lid });
+    let internalModel = this._getInternalModelForIdentifier(identifier);
+    this._setRecordId(internalModel, trueId, lid);
   },
 
   _setRecordId(internalModel, id, clientId) {
