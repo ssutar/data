@@ -84,14 +84,18 @@ let InternalModelReferenceId = 1;
   @class InternalModel
 */
 export default class InternalModel {
-  constructor(modelName, id, store, data, clientId) {
+  constructor(store, identifier) {
     heimdall.increment(new_InternalModel);
-    this.id = id;
+    this.id = identifier.id;
     this.store = store;
-    this.modelName = modelName;
-    this.clientId = clientId;
-
-    this._recordData = store._createRecordData(modelName, id, clientId, this);
+    this.modelName = identifier.type;
+    this.clientId = identifier.lid;
+    this._recordData = store._createRecordData(
+      identifier.type,
+      identifier.id,
+      identifier.lid,
+      this
+    );
 
     // this ensure ordered set can quickly identify this as unique
     this[Ember.GUID_KEY] = InternalModelReferenceId++ + 'internal-model';

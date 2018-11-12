@@ -2932,12 +2932,8 @@ const Store = Service.extend({
       !existingInternalModel
     );
 
-    if (id === null && !clientId) {
-      clientId = this.newClientId();
-    }
-    // lookupFactory should really return an object that creates
-    // instances with the injections applied
-    let internalModel = new InternalModel(modelName, id, this, data, clientId);
+    let identifier = recordIdentifierFor(this, { type: modelName, id, lid: clientId });
+    let internalModel = new InternalModel(this, identifier);
     if (clientId) {
       this._newlyCreatedModelsFor(modelName).add(internalModel, clientId);
     }
