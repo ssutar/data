@@ -75,17 +75,15 @@ const PRIMARY_ATTRIBUTE_KEY = 'base';
   @namespace DS
 */
 export function AdapterError(errors, message = 'Adapter operation failed') {
-  let err = new EmberError(this, message);
-  err.isAdapterError = true;
+  this.isAdapterError = true;
+  this.message = message;
 
-  err.errors = errors || [
+  this.errors = errors || [
     {
       title: 'Adapter Error',
       detail: message,
     },
   ];
-
-  return err;
 }
 
 function extendFn(ErrorClass) {
@@ -97,7 +95,7 @@ function extendFn(ErrorClass) {
 function extend(ParentErrorClass, defaultMessage) {
   let ErrorClass = function(errors, message) {
     assert('`AdapterError` expects json-api formatted errors array.', Array.isArray(errors || []));
-    return new ParentErrorClass(errors, message || defaultMessage);
+    ParentErrorClass.call(this, errors, message || defaultMessage);
   };
   ErrorClass.prototype = Object.create(ParentErrorClass.prototype);
   ErrorClass.extend = extendFn(ErrorClass);
@@ -166,6 +164,7 @@ AdapterError.extend = extendFn(AdapterError);
 
   @class InvalidError
   @namespace DS
+  @extends AdapterError
 */
 export const InvalidError = extend(
   AdapterError,
@@ -203,6 +202,7 @@ export const InvalidError = extend(
 
   @class TimeoutError
   @namespace DS
+  @extends AdapterError
 */
 export const TimeoutError = extend(AdapterError, 'The adapter operation timed out');
 
@@ -214,6 +214,7 @@ export const TimeoutError = extend(AdapterError, 'The adapter operation timed ou
 
   @class AbortError
   @namespace DS
+  @extends AdapterError
 */
 export const AbortError = extend(AdapterError, 'The adapter operation was aborted');
 
@@ -249,6 +250,7 @@ export const AbortError = extend(AdapterError, 'The adapter operation was aborte
 
   @class UnauthorizedError
   @namespace DS
+  @extends AdapterError
 */
 export const UnauthorizedError = extend(AdapterError, 'The adapter operation is unauthorized');
 
@@ -261,6 +263,7 @@ export const UnauthorizedError = extend(AdapterError, 'The adapter operation is 
 
   @class ForbiddenError
   @namespace DS
+  @extends AdapterError
 */
 export const ForbiddenError = extend(AdapterError, 'The adapter operation is forbidden');
 
@@ -299,6 +302,7 @@ export const ForbiddenError = extend(AdapterError, 'The adapter operation is for
 
   @class NotFoundError
   @namespace DS
+  @extends AdapterError
 */
 export const NotFoundError = extend(AdapterError, 'The adapter could not find the resource');
 
@@ -311,6 +315,7 @@ export const NotFoundError = extend(AdapterError, 'The adapter could not find th
 
   @class ConflictError
   @namespace DS
+  @extends AdapterError
 */
 export const ConflictError = extend(AdapterError, 'The adapter operation failed due to a conflict');
 
@@ -321,6 +326,7 @@ export const ConflictError = extend(AdapterError, 'The adapter operation failed 
 
   @class ServerError
   @namespace DS
+  @extends AdapterError
 */
 export const ServerError = extend(
   AdapterError,
