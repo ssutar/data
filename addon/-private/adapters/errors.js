@@ -75,15 +75,17 @@ const PRIMARY_ATTRIBUTE_KEY = 'base';
   @namespace DS
 */
 export function AdapterError(errors, message = 'Adapter operation failed') {
-  this.isAdapterError = true;
-  EmberError.call(this, message);
+  let err = new EmberError(this, message);
+  err.isAdapterError = true;
 
-  this.errors = errors || [
+  err.errors = errors || [
     {
       title: 'Adapter Error',
       detail: message,
     },
   ];
+
+  return err;
 }
 
 function extendFn(ErrorClass) {
@@ -95,7 +97,7 @@ function extendFn(ErrorClass) {
 function extend(ParentErrorClass, defaultMessage) {
   let ErrorClass = function(errors, message) {
     assert('`AdapterError` expects json-api formatted errors array.', Array.isArray(errors || []));
-    ParentErrorClass.call(this, errors, message || defaultMessage);
+    return new ParentErrorClass(errors, message || defaultMessage);
   };
   ErrorClass.prototype = Object.create(ParentErrorClass.prototype);
   ErrorClass.extend = extendFn(ErrorClass);
